@@ -55,12 +55,8 @@ pub const Mode = enum {
     cfg_constrained,
 
     fn parse(text: []const u8) !Mode {
-        if (std.mem.eql(u8, text, "typed_unconstrained")) {
-            return .typed_unconstrained;
-        }
-        if (std.mem.eql(u8, text, "cfg_constrained")) {
-            return .cfg_constrained;
-        }
+        if (std.mem.eql(u8, text, "typed_unconstrained")) return .typed_unconstrained;
+        if (std.mem.eql(u8, text, "cfg_constrained")) return .cfg_constrained;
         return error.UnknownMode;
     }
 
@@ -198,11 +194,11 @@ const RunAccumulator = struct {
         if (!keyEql(record.key, self.key)) return error.WrongRun;
         if (record.round != self.current_round) return error.UnexpectedRound;
         if (record.round > canonical_max_rounds) return error.BudgetExceeded;
-        if (record.worker == 0 or record.worker > worker_count) {
+        if (record.worker == 0 or @as(usize, record.worker) > worker_count) {
             return error.InvalidWorker;
         }
 
-        const worker_index: usize = record.worker - 1;
+        const worker_index: usize = @intCast(record.worker - 1);
         if (self.seen_workers[worker_index]) return error.DuplicateWorker;
         if (record.knowledge_before != self.knowledge[worker_index]) {
             return error.KnowledgeMismatch;
@@ -297,8 +293,7 @@ const RunAccumulator = struct {
         self.network_messages += metrics.network_messages;
         self.communication_units += metrics.communication_units;
         self.useful_fact_deliveries += metrics.useful_fact_deliveries;
-        self.duplicate_fact_transmissions +=
-            metrics.duplicate_fact_transmissions;
+        self.duplicate_fact_transmissions += metrics.duplicate_fact_transmissions;
         self.rounds += 1;
         self.solved = self.knowledge[collector_index] == full_mask;
         self.current_round += 1;
@@ -327,8 +322,7 @@ const RunAccumulator = struct {
             .network_messages = self.network_messages,
             .communication_units = self.communication_units,
             .useful_fact_deliveries = self.useful_fact_deliveries,
-            .duplicate_fact_transmissions =
-                self.duplicate_fact_transmissions,
+            .duplicate_fact_transmissions = self.duplicate_fact_transmissions,
             .completion_tokens = self.completion_tokens,
             .generated_bytes = self.generated_bytes,
             .latency_us = self.latency_us,
@@ -341,11 +335,10 @@ const RunAccumulator = struct {
 pub fn summarizeTsv(tsv: []const u8) Summary {
     var summary = Summary{};
     var active: ?RunAccumulator = null;
-    var lines = std.mem.splitScalar(u8, tsv, '
-');
+    var lines = std.mem.splitScalar(u8, tsv, '\n');
 
     while (lines.next()) |raw_line| {
-        const line = std.mem.trim(u8, raw_line, "");
+        const line = std.mem.trim(u8, raw_line, "\r");
         if (line.len == 0 or line[0] == '#') continue;
 
         summary.records += 1;
@@ -451,8 +444,7 @@ fn neighbors(topology: Topology, worker_index: usize) NeighborSet {
     var set = NeighborSet{};
     switch (topology) {
         .ring => {
-            const left =
-                (worker_index + worker_count - 1) % worker_count;
+            const left = (worker_index + worker_count - 1) % worker_count;
             const right = (worker_index + 1) % worker_count;
             set.items[0] = left;
             set.len = 1;
@@ -490,8 +482,7 @@ fn neighbors(topology: Topology, worker_index: usize) NeighborSet {
 }
 
 fn parseAction(text: []const u8) !Action {
-    const trimmed = std.mem.trim(u8, text, " 	
-");
+    const trimmed = std.mem.trim(u8, text, " \t\r\n");
     if (trimmed.len == 0) return error.InvalidAction;
 
     var tokens = std.mem.tokenizeScalar(u8, trimmed, ' ');
@@ -542,15 +533,12 @@ fn applyRound(
 
                 for (peers.slice()) |recipient| {
                     metrics.network_messages += 1;
-                    const selected: usize =
-                        @intCast(@popCount(action.facts));
+                    const selected: usize = @intCast(@popCount(action.facts));
                     metrics.communication_units += selected;
                     const unseen = action.facts & ~next[recipient];
                     const duplicate = action.facts & next[recipient];
-                    metrics.useful_fact_deliveries +=
-                        @intCast(@popCount(unseen));
-                    metrics.duplicate_fact_transmissions +=
-                        @intCast(@popCount(duplicate));
+                    metrics.useful_fact_deliveries += @intCast(@popCount(unseen));
+                    metrics.duplicate_fact_transmissions += @intCast(@popCount(duplicate));
                     next[recipient] |= action.facts;
                 }
             },
@@ -609,7 +597,7 @@ fn factBit(index: usize) u8 {
 fn parseRawLine(line: []const u8) !RawRecord {
     var fields: [13][]const u8 = undefined;
     var count: usize = 0;
-    var iterator = std.mem.splitScalar(u8, line, '	');
+    var iterator = std.mem.splitScalar(u8, line, '\t');
 
     while (iterator.next()) |field| {
         if (count >= fields.len) return error.InvalidRecord;
@@ -649,7 +637,8 @@ fn unescapeCompletion(
 
     while (src < input.len) {
         if (dst >= out.len) return error.CompletionTooLarge;
-        if (input[src] != '\') {
+
+        if (input[src] != '\\') {
             out[dst] = input[src];
             dst += 1;
             src += 1;
@@ -659,16 +648,16 @@ fn unescapeCompletion(
         src += 1;
         if (src >= input.len) return error.InvalidEscape;
         out[dst] = switch (input[src]) {
-            '\' => '\',
-            't' => '	',
-            'r' => '',
-            'n' => '
-',
+            '\\' => '\\',
+            't' => '\t',
+            'r' => '\r',
+            'n' => '\n',
             else => return error.InvalidEscape,
         };
         dst += 1;
         src += 1;
     }
+
     return out[0..dst];
 }
 
@@ -685,11 +674,11 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const allocator = init.gpa;
     const args = try init.minimal.args.toSlice(init.arena.allocator());
+
     if (args.len != 2) {
         try std.Io.File.stderr().writeStreamingAll(
             io,
-            "usage: f4-replay <raw.tsv>
-",
+            "usage: f4-replay <raw.tsv>\n",
         );
         std.process.exit(2);
     }
@@ -707,8 +696,7 @@ pub fn main(init: std.process.Init) !void {
         var buffer: [256]u8 = undefined;
         const msg = try std.fmt.bufPrint(
             &buffer,
-            "F4 replay rejected data: malformed={d} replay_errors={d}
-",
+            "F4 replay rejected data: malformed={d} replay_errors={d}\n",
             .{ summary.malformed_records, summary.replay_errors },
         );
         try std.Io.File.stderr().writeStreamingAll(io, msg);
@@ -718,21 +706,19 @@ pub fn main(init: std.process.Init) !void {
     const out = std.Io.File.stdout();
     try out.writeStreamingAll(
         io,
-        "population	topology	environment_seed	sampling_seed	mode	" ++
-            "success	rounds	model_calls	deterministic_calls	protocol_actions	" ++
-            "invalid_actions	backend_errors	semantic_violations	network_messages	" ++
-            "communication_units	useful	duplicate	completion_tokens	generated_bytes	" ++
-            "trajectory_hash	budget_compliant
-",
+        "population\ttopology\tenvironment_seed\tsampling_seed\tmode\t" ++
+            "success\trounds\tmodel_calls\tdeterministic_calls\tprotocol_actions\t" ++
+            "invalid_actions\tbackend_errors\tsemantic_violations\tnetwork_messages\t" ++
+            "communication_units\tuseful\tduplicate\tcompletion_tokens\tgenerated_bytes\t" ++
+            "trajectory_hash\tbudget_compliant\n",
     );
 
     for (summary.runs[0..summary.run_count]) |run| {
         var buffer: [1024]u8 = undefined;
         const line = try std.fmt.bufPrint(
             &buffer,
-            "{s}	{s}	{d}	{d}	{s}	{s}	{d}	{d}	{d}	{d}	" ++
-                "{d}	{d}	{d}	{d}	{d}	{d}	{d}	{d}	{d}	{x}	{s}
-",
+            "{s}\t{s}\t{d}\t{d}\t{s}\t{s}\t{d}\t{d}\t{d}\t{d}\t" ++
+                "{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{x}\t{s}\n",
             .{
                 run.key.population.name(),
                 run.key.topology.name(),
@@ -764,6 +750,7 @@ pub fn main(init: std.process.Init) !void {
 test "F4 deterministic population converges on ring" {
     var knowledge = initialKnowledge(0);
     var round: u32 = 0;
+
     while (round < canonical_max_rounds and
         knowledge[collector_index] != full_mask) : (round += 1)
     {
@@ -777,12 +764,14 @@ test "F4 deterministic population converges on ring" {
         }
         _ = applyRound(&knowledge, actions, .ring);
     }
+
     try std.testing.expectEqual(full_mask, knowledge[collector_index]);
 }
 
 test "F4 grid topology is connected for five workers" {
     const n0 = neighbors(.grid, 0);
     try std.testing.expectEqualSlices(usize, &.{ 1, 3 }, n0.slice());
+
     const n1 = neighbors(.grid, 1);
     try std.testing.expectEqualSlices(usize, &.{ 0, 2, 4 }, n1.slice());
 }
@@ -791,6 +780,7 @@ test "F4 parser rejects prose and accepts protocol vocabulary" {
     const claim = try parseAction("CLAIM A,C,E");
     try std.testing.expectEqual(ActionKind.claim, claim.kind);
     try std.testing.expectEqual(@as(u8, 0b10101), claim.facts);
+
     try std.testing.expectError(
         error.InvalidAction,
         parseAction("I think CLAIM A"),
