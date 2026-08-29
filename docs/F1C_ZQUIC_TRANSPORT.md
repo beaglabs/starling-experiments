@@ -26,6 +26,7 @@ of F1c.
 Starlings owns:
 
 - policy and local observations;
+- the frozen Stage 7C asynchronous local-clock schedule;
 - topology and intended recipients;
 - logical envelope identity;
 - fact selection and fact IDs;
@@ -71,8 +72,9 @@ The TLS ALPN is:
 starlings/1
 ```
 
-A frozen self-signed test certificate/key pair lives under
-`fixtures/f1c/`. It is test material only.
+A frozen self-signed **ECDSA P-256** test certificate/key pair lives under
+`fixtures/f1c/`. P-256 is required by the pinned zquic v1.7.48
+CertificateVerify implementation. The fixture is test material only.
 
 ## Wire framing
 
@@ -134,6 +136,26 @@ Missing collector facts use the F1a cause vocabulary:
 - `pending_at_censor`
 - `unattributed`
 
+## Frozen asynchronous schedule
+
+F1c preserves the frozen Stage 7C/F1a operator schedule rather than changing
+the experiment to synchronous execution.
+
+For every canonical world:
+
+```text
+schedule_seed = world seed
+clock_jitter = 3
+period[node] = 1 + keyed(schedule_seed,node,0,CLOCK) % 3
+first_tick[node] = 1 + mix64(clock_key) % period[node]
+```
+
+Only operators whose local clock fires on a logical tick make a policy
+decision. Each logical attempt is folded into a deterministic
+`schedule_hash`, which is emitted in every evidence row. This lets the
+verifier distinguish deterministic scheduler/policy behavior from variation in
+the real QUIC transport.
+
 ## Fault semantics
 
 Faults are injected at the Starlings/transport boundary, not by modifying
@@ -147,6 +169,8 @@ checked again when it reaches the Starlings receive boundary; if it arrives
 during the cut, it is also terminally partitioned rather than merged.
 
 ### Crash/restart
+
+The canonical crash target is the collector, node 0, matching F1a.
 
 During the crash interval:
 
@@ -207,7 +231,8 @@ The trial file remains ignored. Canonical hash/results are frozen back into
 - zero unattributed missing facts;
 - fault-free convergence;
 - no transport panics;
-- complete full-row K-rerun stability.
+- complete full-row K-rerun stability, including the deterministic
+  `schedule_hash` and measured QUIC counters.
 
 **LIMITATION** is a completed scientific result when structural gates hold but
 the real zquic candidate shows nondeterminism, fault-free non-convergence,
