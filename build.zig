@@ -77,6 +77,7 @@ pub fn build(b: *std.Build) void {
         .name = "run-f1c",
         .root_module = f1c_run_module,
     });
+    b.installArtifact(f1c_exe);
     const f1c_run = b.addRunArtifact(f1c_exe);
     if (b.args) |args| f1c_run.addArgs(args);
     const f1c_step = b.step("run-f1c", "Run F1c zquic transport candidate");
