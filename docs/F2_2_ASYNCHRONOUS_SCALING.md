@@ -267,3 +267,80 @@ failures and must be fixed before any scaling conclusion is accepted.
 After PASS, the dataset SHA and boundary table are frozen into
 `beaglabs/starlings`. F2 is then complete and its experiment scaffold is
 deleted only after the documentation-of-record merge.
+
+## Canonical completion record — 2026-08-29
+
+The authoritative local verifier completed on macOS with Zig 0.16.0.
+
+~~~text
+F2.2 rows: 240
+F2.2 bytes: 35712
+F2.2 sha256:
+25f828b00b74b93f27826c91193057b3bfb1148ae0127c32be1afa79f1911773
+
+F2.2 byte_identical_replay: yes
+F2.2 successes: 240/240
+F2.2 censored: 0
+F2.2 violations: 0
+F2.2 accounting_failures: 0
+F2.2 communication_failures: 0
+F2.2 queue_overflow: 0
+F2.2 unexpected_fault_terminals: 0
+~~~
+
+Per-profile totals across 60 worlds each:
+
+~~~text
+theta37:
+  successes = 60/60
+  communication_units = 1816013
+  duplicate_units = 1434263
+
+theta51:
+  successes = 60/60
+  communication_units = 1720228
+  duplicate_units = 1338138
+
+theta93:
+  successes = 60/60
+  communication_units = 1737538
+  duplicate_units = 1355694
+
+novel_first:
+  successes = 60/60
+  communication_units = 7575655
+  duplicate_units = 7193975
+~~~
+
+All 16 feasibility groups have the same observed pattern:
+
+~~~text
+N=8:   3/3 successful
+N=16:  3/3 successful
+N=32:  3/3 successful
+N=64:  3/3 successful
+N=128: 3/3 successful
+
+largest_all_success_N = 128
+first_any_censored_N = none
+first_all_censored_N = none
+monotone_success_counts = yes
+~~~
+
+This result does **not** establish a feasibility boundary at N=128.
+It establishes that no boundary was observed inside the frozen experiment
+box. For every profile, topology and F/N in the canonical matrix, the measured
+feasibility boundary lies beyond the tested range:
+
+~~~text
+observed lower bound:
+  N > 128
+~~~
+
+Canonical verdict:
+
+~~~text
+F2.2 PASS: asynchronous scaling dataset is deterministic, fully accounted,
+and no feasibility boundary was observed through N=128 under the fixed
+4096 decisions/operator budget
+~~~
