@@ -267,7 +267,7 @@ fn signedDelta(a: u64, b: u64) i128 {
 }
 
 fn signedDeltaU32(a: u32, b: u32) i64 {
-    return @as(i64, a) - @as(i64, b);
+    return @as(i64, @intCast(a)) - @as(i64, @intCast(b));
 }
 
 fn yesNo(value: bool) []const u8 {
