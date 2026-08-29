@@ -1,4 +1,4 @@
-# F3 — local inference control
+# F3a — blind probabilistic inference gating
 
 F3 extends the frozen Stage 7A/7B policy surface from:
 
@@ -342,14 +342,14 @@ The verifier:
 
 ## Outcome semantics
 
-F3 **PASS**:
+F3a **PASS**:
 
 - all structural, provenance, corner and replay gates pass; and
 - at least one validation-selected gated candidate preserves zero failures
   while strictly reducing inference units relative to its zero-failure
   ungated twin.
 
-F3 **LIMITATION**:
+F3a **LIMITATION**:
 
 - all structural, provenance, corner and replay gates pass; but
 - no selected gated candidate meets that inference-reduction criterion.
@@ -367,7 +367,7 @@ The following are engineering failures, not scientific outcomes:
 - replay nondeterminism;
 - build/runtime failure.
 
-No canonical F3 result is claimed until the local verifier completes.
+No canonical F3a result is claimed until the local verifier completes.
 
 ## Canonical completion record — 2026-08-29
 
@@ -455,7 +455,7 @@ id93:
 
 ### Interpretation
 
-F3 closes as a **LIMITATION**, not an engineering failure.
+F3a closes as a **LIMITATION**, not an engineering failure.
 
 The experiment establishes that the tested deterministic cache-reuse gate:
 
@@ -483,5 +483,14 @@ survived validation selection.
 Canonical verdict:
 
 ~~~text
-F3 LIMITATION: local inference-control evidence complete
+F3a LIMITATION: blind probabilistic inference-gating evidence complete
 ~~~
+
+
+## F3 continuation
+
+F3a is a negative-control result, not the final F3 conclusion.
+
+F3 remains open after this result. The next experiment, F3b, holds the frozen
+Stage 7B base policies fixed and tests state-change/staleness-aware refresh
+controllers against exact always-refresh twins.
