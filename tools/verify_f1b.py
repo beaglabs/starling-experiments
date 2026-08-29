@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import os
 import pathlib
 import shutil
 import subprocess
@@ -74,6 +75,7 @@ def run_world(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         timeout=45,
+        env={**os.environ, "RUST_BACKTRACE": "1"},
     )
 
     stderr = proc.stderr.decode(errors="replace")
