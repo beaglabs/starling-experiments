@@ -1,93 +1,88 @@
-# F1b — audited P2Panda-wired candidate transport
+# F1b P2Panda-wired candidate evaluation
 
-F1b re-evaluates the historical P2Panda attempt only after F1a established a
-complete deterministic transport/fact ledger.
+F1b re-evaluates the 2026-08-28 P2Panda candidate only after F1a established
+the deterministic contested-environment accounting model.
 
-The historical candidate remains preserved byte-for-byte under
-`modules/p2panda/historical/`. The active adapter lives separately under
-`modules/p2panda/`.
+## Historical source
 
-## Ownership boundary
-
-P2Panda provides only in-process network wiring and replication.
-
-Starlings owns:
-
-- theta/policy execution through the Zig FFI;
-- initial fact placement;
-- topology and intended recipients;
-- stable envelope identity `(run_nonce, sender, sequence)`;
-- per-recipient logical attempt identity
-  `(sender, sequence, recipient)`;
-- deterministic partition/crash gates;
-- fact merge and completion;
-- terminal transport ledger;
-- collector-missing attribution;
-- deterministic result signatures and evidence classification.
-
-No external-host sockets are part of the canonical F1b validation design.
-
-## Ledger
-
-An intended recipient attempt is recorded before publication.
-
-At an intended recipient's P2Panda `Processed` event the attempt closes as:
-
-- `delivered`;
-- `partitioned`;
-- `crashed`.
-
-Any attempt without a terminal receive event at censor remains `pending`.
-
-The required identity is:
+The rejected candidate is preserved unchanged in
+`modules/p2panda/historical/` from:
 
 ```text
-attempts = delivered + partitioned + crashed + pending
+starlings commit:
+b7fd4571f7e4d770542f7d9b69b89d00d353099b
+
+P2Panda fork revision:
+80051611b7b41250815a40c945ae7bece84aa249
 ```
 
-Collector-missing facts are classified as:
+See `modules/p2panda/HISTORICAL_SOURCE.md` for source blob identities.
 
-- `pending_at_censor`;
-- `crashed_before_merge`;
-- `delivery_faulted`;
-- `never_transmitted`;
-- otherwise `unattributed`.
+## Active candidate
 
-A crash-reset may erase a previously delivered collector fact; that is
-classified as `crashed_before_merge`.
+The active adapter:
 
-## Evaluation
+- links the exact Stage 7A Zig policy through a C ABI;
+- uses P2Panda only for real topic-stream movement between in-process nodes;
+- records a Starlings logical attempt before every recipient edge is
+  published;
+- records delivered/partitioned/crashed/pending terminal categories;
+- exposes P2Panda local/remote operation counts, sync sessions, sync errors,
+  and duplicate envelope observations;
+- maintains per-fact collector attribution;
+- distinguishes attempted communication from delivered communication;
+- requires `communication_units = useful + duplicate`;
+- rejects an unpaired P2Panda receive as a ledger-interface violation.
 
-`tools/verify_f1b.py` runs:
+No relay or bootstrap server is configured. A run-specific P2Panda network ID
+isolates the validation group from unrelated local nodes.
 
-1. the Zig/FFI test gate;
-2. a 24-world fault-free transfer sweep:
-   - theta37/theta51/theta93/novel_first;
-   - ring/grid;
-   - seeds 0,1,2;
-3. a K=3 fixed-configuration determinism audit over four representative
-   worlds;
-4. a contested subset for partition, crash/restart with persistent knowledge,
-   and crash/restart with reset knowledge.
+## Fault semantics
 
-The audit compares a deterministic result signature that includes convergence,
-collector facts, policy progress, attempts/terminals, communication/useful/
-duplicate units, P2Panda operation/session counts, sync/policy errors, missing
-fact causes, and accounting status. Wall-clock elapsed time is intentionally
-excluded.
+The contested subset is injected at the Starlings/P2Panda application
+boundary, not inside P2Panda internals.
 
-## Outcome semantics
+### Partition
 
-`PASS` requires:
+A real P2Panda-delivered envelope whose intended Starlings edge crosses the
+frozen cut during the partition window is terminally rejected as
+`delivery_faulted`.
 
-- every interface/accounting identity is complete;
-- every fault-free world converges;
-- no unattributed collector-missing facts;
-- no P2Panda sync errors;
-- byte-stable result signatures across each K-rerun group.
+### Crash/restart
 
-`LIMITATION` is a completed scientific result when the interface accounting
-is structurally valid but P2Panda exhibits measurable nondeterminism,
-fault-free non-convergence, sync errors, or unattributed loss.
+The designated Starlings node performs no policy work and rejects incoming
+merges during the frozen crash window.
 
-The deterministic Zig substrate remains authoritative in either case.
+- persistent restart retains knowledge;
+- reset restart restores deterministic initial knowledge and clears sent/cursor
+  metadata;
+- collector facts actually erased by reset are explicitly marked, so
+  `crashed_before_merge` cannot be used as a generic explanation for state
+  loss.
+
+## Determinism
+
+The verifier compares the **entire result row** across K=3 reruns for four
+fixed fault-free worlds. `result_signature` is reported as a compact digest,
+but signature equality alone is not sufficient.
+
+The row deliberately contains P2Panda operational counters
+(`p2panda_local_ops`, `p2panda_remote_ops`, `sync_sessions`,
+`sync_errors`). If the real candidate transport varies in these measured
+results, F1b records LIMITATION rather than normalizing the variation away.
+
+## Evidence command
+
+```sh
+python3 tools/verify_f1b.py
+```
+
+Generated dataset:
+
+```text
+trials/f1b-p2panda-wired.tsv
+```
+
+The dataset is gitignored. After a completed PASS or LIMITATION run, its
+SHA-256, audit result, fault-free convergence result, and contested summary are
+frozen into the `starlings` documentation of record.
