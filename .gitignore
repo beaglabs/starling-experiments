@@ -1,0 +1,13 @@
+.zig-cache/
+zig-out/
+__pycache__/
+*.pyc
+
+# Generated experimental outputs: freeze hashes/results in beaglabs/starlings.
+trials/*
+!trials/README.md
+
+# Local model weights and external tool state.
+models/*
+!models/README.md
+modules/*/target/
