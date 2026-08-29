@@ -91,6 +91,7 @@ pub const Result = struct {
     topology: scaling.TopologyKind,
     seed: u64,
     fault: FaultKind,
+    fact_count: usize,
     success: bool = false,
     ticks: u32 = 0,
     collector_initial: usize = 0,
@@ -137,7 +138,7 @@ pub const Result = struct {
     }
 
     fn seedMissing(self: Result) usize {
-        return 32 - self.collector_final;
+        return self.fact_count - self.collector_final;
     }
 
     pub fn communicationAccounted(self: Result) bool {
@@ -186,6 +187,7 @@ const Engine = struct {
                 .topology = config.world.topology,
                 .seed = config.world.seed,
                 .fault = config.fault,
+                .fact_count = config.world.fact_count,
             },
         };
         scaling.initializeStates(
@@ -695,11 +697,12 @@ fn resultSignature(result: Result) u64 {
     var hash: u64 = 0xcbf29ce484222325;
     const values = [_]u64{
         result.seed,
-        @intFromEnum(result.topology),
-        @intFromEnum(result.fault),
-        @intFromBool(result.success),
-        result.ticks,
-        result.collector_final,
+        @as(u64, @intFromEnum(result.topology)),
+        @as(u64, @intFromEnum(result.fault)),
+        @as(u64, @intFromBool(result.success)),
+        @as(u64, @intCast(result.fact_count)),
+        @as(u64, result.ticks),
+        @as(u64, @intCast(result.collector_final)),
         result.policy_ticks,
         result.actions,
         result.transport_attempts,
@@ -712,11 +715,11 @@ fn resultSignature(result: Result) u64 {
         result.useful,
         result.duplicate,
         result.violations,
-        result.never_transmitted,
-        result.delivery_faulted,
-        result.crashed_before_merge,
-        result.pending_at_censor,
-        result.unattributed,
+        @as(u64, @intCast(result.never_transmitted)),
+        @as(u64, @intCast(result.delivery_faulted)),
+        @as(u64, @intCast(result.crashed_before_merge)),
+        @as(u64, @intCast(result.pending_at_censor)),
+        @as(u64, @intCast(result.unattributed)),
         result.udp_datagrams,
         result.network_polls,
         result.backpressure_events,
@@ -724,9 +727,9 @@ fn resultSignature(result: Result) u64 {
         result.malformed_frames,
     };
     for (values) |value| {
-        var bytes = value.toBytes();
-        for (&bytes) |byte| {
-            hash ^= byte;
+        var shift: u6 = 0;
+        while (shift < 64) : (shift += 8) {
+            hash ^= @as(u8, @truncate(value >> shift));
             hash *%= 0x100000001b3;
         }
     }
