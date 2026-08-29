@@ -243,3 +243,72 @@ be fixed before F1c is complete.
 
 The deterministic Zig substrate remains authoritative in either PASS or
 LIMITATION.
+
+## Canonical completion record — 2026-08-29
+
+The authoritative local verifier completed on macOS with Zig 0.16.0.
+
+~~~text
+F1c rows: 42
+F1c bytes: 8007
+F1c sha256:
+6ef0b88e5c06c1ceb3ce41ec08e1fcec89a08743e7e2440e5d48a097b3e66ddb
+
+zquic tag: v1.7.48
+zquic commit: 4bd041ac95425fb0aa229b74c9d3316c74aaf829
+zquic package hash:
+zquic-1.7.0-2zRc1PSAFgDCESpm-vZsUr4O02HM0dpzmVJSx5WXW6ES
+
+fault_free_rows: 24
+fault_free_successes: 24/24
+determinism_audit_rows: 12
+determinism_K: 3
+contested_rows: 6
+
+envelope_accounting_failures: 0
+missing_accounting_failures: 0
+communication_accounting_failures: 0
+protocol_violations: 0
+send_failures: 0
+malformed_frames: 0
+unattributed_missing: 0
+pending_at_censor: 0
+transport_panics: 0
+udp_datagrams: 37396
+backpressure_events: 0
+~~~
+
+Full-row K=3 audit:
+
+~~~text
+novel_first / grid / 2:
+  6d24eee242cc7dbc
+  6d24eee242cc7dbc
+  6d24eee242cc7dbc
+  stable=yes
+
+theta37 / ring / 0:
+  45f9f003bc89eab4
+  45f9f003bc89eab4
+  45f9f003bc89eab4
+  stable=yes
+
+theta51 / grid / 1:
+  9926f2289bf713c8
+  9926f2289bf713c8
+  9926f2289bf713c8
+  stable=yes
+
+theta93 / ring / 2:
+  608d12243989469e
+  608d12243989469e
+  608d12243989469e
+  stable=yes
+~~~
+
+Canonical verdict:
+
+~~~text
+F1c PASS: pinned zquic transport is stable across the audit and fully
+accounted under the contested subset
+~~~
