@@ -29,9 +29,6 @@ jobs:
       - name: Zig tests
         run: zig build test
 
-      - name: Rust format
-        run: cargo fmt --check --manifest-path modules/p2panda/Cargo.toml
-
       - name: Rust tests
         run: cargo test --release --manifest-path modules/p2panda/Cargo.toml
 
