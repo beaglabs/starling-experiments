@@ -32,6 +32,15 @@ pub fn build(b: *std.Build) void {
     });
     const run_f1a_tests = b.addRunArtifact(f1a_tests);
 
+    const f3_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/f3_test_root.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_f3_tests = b.addRunArtifact(f3_tests);
+
     const test_step = b.step(
         "test",
         "Run protocol-core, frozen-substrate, and finalization tests",
@@ -39,11 +48,13 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_core_tests.step);
     test_step.dependOn(&run_substrate_tests.step);
     test_step.dependOn(&run_f1a_tests.step);
+    test_step.dependOn(&run_f3_tests.step);
 
     addRunStep(b, target, optimize, "run-stage5a", "Run frozen Stage 5A CLI", "src/substrate/stage5a_run.zig");
     addRunStep(b, target, optimize, "run-stage7a", "Run frozen Stage 7A CLI", "src/substrate/stage7a_run.zig");
     addRunStep(b, target, optimize, "run-stage7c", "Run frozen Stage 7C CLI", "src/substrate/stage7c_run.zig");
     addRunStep(b, target, optimize, "run-f1a", "Run F1a canonical fault matrix", "src/f1a_run.zig");
+    addRunStep(b, target, optimize, "run-f3", "Run F3 local inference-control experiments", "src/f3_run.zig");
 }
 
 fn addRunStep(
