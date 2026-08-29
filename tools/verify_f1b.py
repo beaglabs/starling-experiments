@@ -27,9 +27,9 @@ COMMON_ARGS = (
     "--redundancy", "2",
     "--bandwidth", "2",
     "--tick-ms", "5",
-    "--startup-ms", "250",
-    "--drain-ms", "250",
-    "--max-ticks", "512",
+    "--startup-ms", "1000",
+    "--drain-ms", "300",
+    "--max-ticks", "4096",
     "--sim-max-rounds", "4096",
 )
 
@@ -85,6 +85,10 @@ def structural_check(
         hard_failures.append(f"{label}: envelope ledger identity failed")
     if row["missing_accounted"] != "yes":
         hard_failures.append(f"{label}: missing-fact ledger identity failed")
+    if row["communication_accounted"] != "yes":
+        hard_failures.append(f"{label}: communication identity failed")
+    if int_field(row, "ledger_interface_violations") != 0:
+        hard_failures.append(f"{label}: transport-ledger interface violation")
     if int_field(row, "policy_errors") != 0:
         hard_failures.append(f"{label}: Zig policy FFI errors")
     attempts = int_field(row, "transport_attempts")
@@ -154,6 +158,7 @@ def main() -> int:
         ("novel_first", "grid", 2),
     )
     signatures: dict[tuple[str, str, int], list[str]] = defaultdict(list)
+    audit_results: dict[tuple[str, str, int], list[tuple[tuple[str, str], ...]]] = defaultdict(list)
     for profile, topology, seed in audit_worlds:
         for repeat in range(K):
             row = run_world(profile, topology, seed, "no_fault")
@@ -164,6 +169,9 @@ def main() -> int:
             )
             signatures[(profile, topology, seed)].append(
                 row["result_signature"]
+            )
+            audit_results[(profile, topology, seed)].append(
+                tuple(sorted(row.items()))
             )
             if int_field(row, "unattributed") != 0:
                 limitations.append(
@@ -180,6 +188,10 @@ def main() -> int:
         if len(set(values)) != 1:
             limitations.append(
                 f"result-signature nondeterminism: {key} -> {values}"
+            )
+        if len(set(audit_results[key])) != 1:
+            limitations.append(
+                f"full-result nondeterminism: {key}"
             )
 
     # Contested subset: application-level deterministic fault gates around the
@@ -204,6 +216,14 @@ def main() -> int:
             if int_field(row, "unattributed") != 0:
                 limitations.append(
                     f"contested unattributed loss: {profile}/{topology}/{seed}/{fault}"
+                )
+            if fault == "partition" and int_field(row, "partitioned") == 0:
+                hard_failures.append(
+                    f"contested partition did not exercise fault: {profile}/{topology}/{seed}"
+                )
+            if fault.startswith("crash_restart") and int_field(row, "crashed") == 0:
+                hard_failures.append(
+                    f"contested crash did not exercise fault: {profile}/{topology}/{seed}/{fault}"
                 )
             row = {"phase": "contested", "repeat": "0", **row}
             records.append(row)
@@ -250,6 +270,8 @@ def main() -> int:
     print(f"contested_rows: {len(contested)}")
     print("envelope_accounting_failures: 0")
     print("missing_accounting_failures: 0")
+    print("communication_accounting_failures: 0")
+    print("ledger_interface_violations: 0")
 
     unattributed = sum(int_field(r, "unattributed") for r in records)
     pending = sum(int_field(r, "pending_at_censor") for r in records)
