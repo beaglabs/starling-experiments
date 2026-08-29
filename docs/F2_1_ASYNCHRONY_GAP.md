@@ -172,3 +172,94 @@ F2.1 is complete only after the local canonical dataset SHA and findings are
 frozen into `beaglabs/starlings`.
 
 F2.2 scaling does not begin until this gate is closed.
+
+## Canonical completion record — 2026-08-29
+
+The authoritative local verifier completed on macOS with Zig 0.16.0.
+
+~~~text
+F2.1 rows: 36
+F2.1 bytes: 5695
+F2.1 sha256:
+34531d63dc8628a7592f01f4c06cc0be632e0c2428f43e933beeec0b1a5293cd
+
+F2.1 byte_identical_replay: yes
+F2.1 stage7c_parity_rows: 36/36
+F2.1 budget_bound_rows: 0
+F2.1 sync_successes: 36/36
+F2.1 async_successes: 36/36
+F2.1 async_censored: 0
+~~~
+
+Internal validation:
+
+~~~text
+rows: 36
+violations: 0
+stage7c_parity_failures: 0
+accounting_failures: 0
+communication_failures: 0
+invalid_censoring: 0
+~~~
+
+Per-profile aggregate gap across six paired worlds each:
+
+~~~text
+novel_first:
+  communication_delta = +819
+  duplicate_delta     = +779
+  policy_call_delta   = +267
+  tick_round_delta    = +120
+
+round_robin:
+  communication_delta = +1092
+  duplicate_delta     = +1040
+  policy_call_delta   = +315
+  tick_round_delta    = +149
+
+seeded:
+  communication_delta = +1374
+  duplicate_delta     = +1356
+  policy_call_delta   = +405
+  tick_round_delta    = +289
+
+theta37:
+  communication_delta = +478
+  duplicate_delta     = +427
+  policy_call_delta   = +192
+  tick_round_delta    = +103
+
+theta51:
+  communication_delta = +144
+  duplicate_delta     = +162
+  policy_call_delta   = +135
+  tick_round_delta    = +94
+
+theta93:
+  communication_delta = +691
+  duplicate_delta     = +644
+  policy_call_delta   = +380
+  tick_round_delta    = +205
+~~~
+
+Aggregate across all 36 paired worlds:
+
+~~~text
+communication_delta = +4598
+duplicate_delta     = +4408
+policy_call_delta   = +1694
+tick_round_delta    = +960
+~~~
+
+The asynchronous arm therefore preserves feasibility across the entire frozen
+F2.1 box but incurs measurable overhead in every reported aggregate resource
+dimension. Of the six profiles, theta51 has the smallest aggregate
+communication and completion-time gap; seeded has the largest aggregate
+communication and tick/round gap.
+
+Canonical verdict:
+
+~~~text
+F2.1 PASS: paired synchronous/asynchronous gap dataset is deterministic,
+budget-matched, and Stage-7C-parity checked
+~~~
