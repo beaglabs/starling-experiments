@@ -2,10 +2,9 @@
 """S0 reproducibility gate.
 
 This script intentionally fails closed. It proves that the re-materialized
-historical source files are byte-identical Git blobs, materializes the exact
-pinned private Starlings core through ordinary Git SSH authentication, runs the
-package and historical validation gates, regenerates the Stage 7C first suite,
-and requires its canonical SHA-256 to match the frozen value.
+historical source files are byte-identical Git blobs, runs the pinned public
+Starlings package and historical validation gates, regenerates the Stage 7C
+first suite, and requires its canonical SHA-256 to match the frozen value.
 """
 
 from __future__ import annotations
@@ -17,8 +16,6 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CORE_DIR = ROOT / ".deps" / "starlings"
-CORE_REMOTE = "git@github.com:beaglabs/starlings.git"
 PINNED_CORE_COMMIT = "7c1152b82f540fafe072bcf64ef99904a05be044"
 PINNED_CORE_PACKAGE_HASH = (
     "starlings-0.1.0-3sAXWncEAgDdDV5wfBEssJhtUpW2Spm-u8gDHJOFPaKE"
@@ -72,81 +69,17 @@ def capture_text(*args: str) -> str:
     return run(*args, capture=True).stdout.decode().strip()
 
 
-def materialize_core() -> None:
-    if shutil.which("git") is None:
-        raise SystemExit("git is required on PATH")
-
-    CORE_DIR.parent.mkdir(parents=True, exist_ok=True)
-
-    if CORE_DIR.exists() and not (CORE_DIR / ".git").is_dir():
-        raise SystemExit(
-            f"{CORE_DIR} exists but is not a Git checkout; remove it and re-run"
-        )
-
-    if not CORE_DIR.exists():
-        run("git", "clone", "--no-checkout", CORE_REMOTE, str(CORE_DIR))
-
-    remote = capture_text(
-        "git", "-C", str(CORE_DIR), "remote", "get-url", "origin"
-    )
-    if remote != CORE_REMOTE:
-        raise SystemExit(
-            "unexpected Starlings dependency origin:\n"
-            f"expected: {CORE_REMOTE}\n"
-            f"actual:   {remote}"
-        )
-
-    run(
-        "git",
-        "-C",
-        str(CORE_DIR),
-        "fetch",
-        "--depth=1",
-        "origin",
-        PINNED_CORE_COMMIT,
-    )
-    run(
-        "git",
-        "-C",
-        str(CORE_DIR),
-        "checkout",
-        "--detach",
-        "--force",
-        PINNED_CORE_COMMIT,
-    )
-    run(
-        "git",
-        "-C",
-        str(CORE_DIR),
-        "reset",
-        "--hard",
-        PINNED_CORE_COMMIT,
-    )
-
-    actual = capture_text("git", "-C", str(CORE_DIR), "rev-parse", "HEAD")
-    if actual != PINNED_CORE_COMMIT:
-        raise SystemExit(
-            "pinned core checkout mismatch:\n"
-            f"expected: {PINNED_CORE_COMMIT}\n"
-            f"actual:   {actual}"
-        )
-
-    print(f"pinned core: {actual}")
-    print(f"recorded core package hash: {PINNED_CORE_PACKAGE_HASH}")
-
-
 def main() -> int:
     if shutil.which("zig") is None:
         raise SystemExit("zig 0.16.0 is required on PATH")
 
     zig_version = capture_text("zig", "version")
     if zig_version != "0.16.0":
-        raise SystemExit(
-            f"zig 0.16.0 is required; found {zig_version}"
-        )
+        raise SystemExit(f"zig 0.16.0 is required; found {zig_version}")
 
     check_frozen_sources()
-    materialize_core()
+    print(f"pinned core commit: {PINNED_CORE_COMMIT}")
+    print(f"pinned core package hash: {PINNED_CORE_PACKAGE_HASH}")
 
     run("zig", "build", "test")
     run("zig", "build", "run-stage5a", "--", "validate")
