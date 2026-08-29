@@ -5,7 +5,7 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .starlings = .{
-            .url = "git+https://github.com/beaglabs/starlings#7c1152b82f540fafe072bcf64ef99904a05be044",
+            .url = "https://github.com/beaglabs/starlings/archive/7c1152b82f540fafe072bcf64ef99904a05be044.tar.gz",
             .hash = "starlings-0.1.0-3sAXWncEAgDdDV5wfBEssJhtUpW2Spm-u8gDHJOFPaKE",
         },
     },
