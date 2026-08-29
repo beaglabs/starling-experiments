@@ -1281,6 +1281,7 @@ fn result_signature(
 ) -> u64 {
     let mut hash = 0xcbf29ce484222325_u64;
     let values = [
+        run_nonce(config),
         config.seed,
         config.nodes as u64,
         config.facts as u64,
@@ -1288,6 +1289,7 @@ fn result_signature(
         collector.final_facts as u64,
         aggregate.max_local_round as u64,
         aggregate.actions,
+        aggregate.logical_messages,
         counts.attempts,
         counts.delivered,
         counts.partitioned,
@@ -1296,6 +1298,10 @@ fn result_signature(
         aggregate.communication_units,
         aggregate.useful_deliveries,
         aggregate.duplicate_deliveries,
+        aggregate.duplicate_envelopes,
+        aggregate.p2panda_local_operations,
+        aggregate.p2panda_remote_operations,
+        aggregate.sync_sessions,
         aggregate.sync_errors,
         aggregate.policy_errors,
         missing.never_transmitted as u64,
