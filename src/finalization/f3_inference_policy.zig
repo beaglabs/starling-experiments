@@ -32,6 +32,7 @@ pub const Result = struct {
     collector_final_facts: usize,
     policy_calls: u64,
     inference_units: u64,
+    cache_reuses: u64,
     actions_proposed: u64,
     rejected_actions: u64,
     messages: u64,
@@ -107,6 +108,8 @@ pub fn run(config: stage7a.Config, theta: Theta) Error!Result {
                     stage7a.decide(theta.base, observation);
                 cache_initialized[operator_index] = true;
                 result.inference_units +%= 1;
+            } else {
+                result.cache_reuses +%= 1;
             }
 
             if (cached_actions[operator_index]) |action| {
@@ -248,7 +251,10 @@ pub fn run(config: stage7a.Config, theta: Theta) Error!Result {
         result.communication_units ==
             result.useful_deliveries + result.duplicate_deliveries,
     );
-    std.debug.assert(result.inference_units <= result.policy_calls);
+    std.debug.assert(
+        result.policy_calls ==
+            result.inference_units + result.cache_reuses,
+    );
     return result;
 }
 
@@ -264,6 +270,7 @@ fn fromBaseline(baseline: stage7a.Result, theta: Theta) Result {
         .collector_final_facts = baseline.collector_final_facts,
         .policy_calls = baseline.policy_calls,
         .inference_units = baseline.policy_calls,
+        .cache_reuses = 0,
         .actions_proposed = baseline.actions_proposed,
         .rejected_actions = baseline.rejected_actions,
         .messages = baseline.messages,
@@ -296,6 +303,7 @@ fn initialResult(
         .collector_final_facts = initial_facts,
         .policy_calls = 0,
         .inference_units = 0,
+        .cache_reuses = 0,
         .actions_proposed = 0,
         .rejected_actions = 0,
         .messages = 0,
@@ -382,6 +390,7 @@ fn expectSame(a: Result, b: stage7a.Result) !void {
     try std.testing.expectEqual(b.duplicate_deliveries, a.duplicate_deliveries);
     try std.testing.expectEqual(b.violations, a.violations);
     try std.testing.expectEqual(b.policy_calls, a.inference_units);
+    try std.testing.expectEqual(@as(u64, 0), a.cache_reuses);
 }
 
 test "F3 c=1000 delegates exactly to Stage 7A" {
@@ -435,4 +444,53 @@ test "F3 gated inference never exceeds policy calls" {
     });
     try std.testing.expect(result.inference_units <= result.policy_calls);
     try std.testing.expect(result.inference_units > 0);
+    try std.testing.expectEqual(
+        result.policy_calls,
+        result.inference_units + result.cache_reuses,
+    );
+}
+
+
+test "F3 c=0 refreshes once per operator then reuses cache" {
+    const config = stage7a.Config{
+        .population_size = 8,
+        .fact_count = 32,
+        .topology = .ring,
+        .redundancy = 2,
+        .bandwidth = 2,
+        .seed = 0,
+        .max_rounds = 64,
+    };
+    const result = try run(config, .{
+        .base = stage7a.soft_novel_theta,
+        .inference_gating_permille = 0,
+    });
+    try std.testing.expectEqual(
+        @as(u64, config.population_size),
+        result.inference_units,
+    );
+    try std.testing.expectEqual(
+        result.policy_calls,
+        result.inference_units + result.cache_reuses,
+    );
+}
+
+test "F3 inference gate is monotone in c" {
+    var operator_index: usize = 0;
+    while (operator_index < 8) : (operator_index += 1) {
+        var round: u32 = 1;
+        while (round <= 64) : (round += 1) {
+            const low = inferenceAllows(250, 17, operator_index, round);
+            const mid = inferenceAllows(500, 17, operator_index, round);
+            const high = inferenceAllows(750, 17, operator_index, round);
+            if (low) try std.testing.expect(mid);
+            if (mid) try std.testing.expect(high);
+            try std.testing.expect(
+                !inferenceAllows(0, 17, operator_index, round),
+            );
+            try std.testing.expect(
+                inferenceAllows(1000, 17, operator_index, round),
+            );
+        }
+    }
 }
