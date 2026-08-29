@@ -10,8 +10,8 @@ pub const max_links: usize =
     scaling.max_operators * (scaling.max_operators - 1);
 const base_port: u16 = 47200;
 const alpn = "starlings/1";
-const cert_pem = @embedFile("../../fixtures/f1c/cert.pem");
-const key_pem = @embedFile("../../fixtures/f1c/key.pem");
+const cert_pem = @embedFile("fixtures/f1c/cert.pem");
+const key_pem = @embedFile("fixtures/f1c/key.pem");
 
 pub const Counters = struct {
     poll_iterations: u64 = 0,
