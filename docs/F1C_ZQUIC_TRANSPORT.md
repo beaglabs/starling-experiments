@@ -73,7 +73,7 @@ starlings/1
 ```
 
 A frozen self-signed **ECDSA P-256** test certificate/key pair lives under
-`fixtures/f1c/`. P-256 is required by the pinned zquic v1.7.48
+`src/finalization/fixtures/f1c/`. P-256 is required by the pinned zquic v1.7.48
 CertificateVerify implementation. The fixture is test material only.
 
 ## Wire framing
