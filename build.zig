@@ -75,7 +75,7 @@ pub fn build(b: *std.Build) void {
     addRunStep(b, target, optimize, "run-stage7a", "Run frozen Stage 7A CLI", "src/substrate/stage7a_run.zig");
     addRunStep(b, target, optimize, "run-stage7c", "Run frozen Stage 7C CLI", "src/substrate/stage7c_run.zig");
     addRunStep(b, target, optimize, "run-f1a", "Run F1a canonical fault matrix", "src/f1a_run.zig");
-    addRunStep(b, target, optimize, "run-f3", "Run F3 local inference-control experiments", "src/f3_run.zig");
+    addRunStep(b, target, optimize, "run-f3", "Run F3a blind inference-gating experiment", "src/f3_run.zig");
 
     const f1c_run_module = b.createModule(.{
         .root_source_file = b.path("src/f1c_run.zig"),
