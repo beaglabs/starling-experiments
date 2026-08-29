@@ -1,5 +1,6 @@
 const std = @import("std");
 const f3 = @import("f3_inference_policy.zig");
+const reference = @import("f3_stage7b_reference.zig");
 const stage7a = @import("../substrate/stage7/stage7a_policy.zig");
 const scaling = @import("../substrate/stage5/stage5a_scaling.zig");
 
@@ -111,6 +112,70 @@ pub const Frontier = struct {
     count: usize = 0,
     min_failures: usize = 0,
 };
+
+pub fn generateCornerCandidates() CandidateSet {
+    const baseline = reference.generateCandidates();
+    var set = CandidateSet{};
+    var i: usize = 0;
+    while (i < baseline.len) : (i += 1) {
+        const item = baseline.items[i];
+        set.items[i] = .{
+            .id = item.id,
+            .source = switch (item.source) {
+                .fixed_profile => .fixed_profile,
+                .latin_hypercube => .latin_hypercube,
+            },
+            .label = item.label,
+            .theta = .{
+                .base = item.theta,
+                .inference_gating_permille = 1000,
+            },
+        };
+    }
+    set.len = baseline.len;
+    return set;
+}
+
+pub fn cornerMatchesReference(
+    candidate_index: usize,
+    split: SplitKind,
+) !bool {
+    const f3_candidates = generateCornerCandidates();
+    const reference_candidates = reference.generateCandidates();
+    if (candidate_index >= f3_candidates.len or
+        candidate_index >= reference_candidates.len)
+    {
+        return false;
+    }
+
+    const actual = try evaluateCandidate(
+        f3_candidates.items[candidate_index],
+        split,
+    );
+    const expected = try reference.evaluateCandidate(
+        reference_candidates.items[candidate_index],
+        switch (split) {
+            .training => .training,
+            .validation => .validation,
+            .population_extrapolation => .population_extrapolation,
+            .density_extrapolation => .density_extrapolation,
+            .redundancy_extrapolation => .redundancy_extrapolation,
+            .bandwidth_extrapolation => .bandwidth_extrapolation,
+            .topology_extrapolation => .topology_extrapolation,
+            .compound_extrapolation => .compound_extrapolation,
+        },
+    );
+
+    return actual.runs == expected.runs and
+        actual.failures == expected.failures and
+        actual.rounds_sum == expected.rounds_sum and
+        actual.communication_sum == expected.communication_sum and
+        actual.duplicate_sum == expected.duplicate_sum and
+        actual.computation_sum == expected.computation_sum and
+        actual.inference_sum == expected.computation_sum and
+        actual.useful_sum == expected.useful_sum and
+        actual.violations == expected.violations;
+}
 
 pub fn generateCandidates() CandidateSet {
     var set = CandidateSet{};
@@ -651,6 +716,24 @@ test "F3 Latin inference gating stays in permille bounds" {
     while (i < candidates.len) : (i += 1) {
         try std.testing.expect(
             candidates.items[i].theta.inference_gating_permille <= 1000,
+        );
+    }
+}
+
+
+test "F3 c=1000 corner candidate set exactly matches Stage 7B" {
+    const actual = generateCornerCandidates();
+    const expected = reference.generateCandidates();
+    try std.testing.expectEqual(expected.len, actual.len);
+
+    var i: usize = 0;
+    while (i < expected.len) : (i += 1) {
+        try std.testing.expect(
+            actual.items[i].theta.base.eql(expected.items[i].theta),
+        );
+        try std.testing.expectEqual(
+            @as(u16, 1000),
+            actual.items[i].theta.inference_gating_permille,
         );
     }
 }
