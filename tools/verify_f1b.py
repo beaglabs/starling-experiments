@@ -143,6 +143,7 @@ def main() -> int:
         "cargo", "build", "--release",
         "--manifest-path", str(MANIFEST),
         timeout_s=600,
+        cwd=MODULE_DIR,
     )
     if not LOCKFILE.exists():
         raise SystemExit("Cargo did not materialize modules/p2panda/Cargo.lock")
