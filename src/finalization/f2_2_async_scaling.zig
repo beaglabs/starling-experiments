@@ -840,82 +840,106 @@ test "F2.1 derived harness preserves frozen Stage 7C when budget is nonbinding" 
 }
 
 
-test "F2.2 preserves F2.1 behavior when the budget is nonbinding" {
-    const fixtures = [_]struct {
-        theta: stage7a.Theta,
-        topology: scaling.TopologyKind,
-        seed: u64,
-        facts: usize,
-    }{
-        .{ .theta = theta37, .topology = .ring, .seed = 0, .facts = 8 },
-        .{ .theta = theta51, .topology = .grid, .seed = 1, .facts = 16 },
-        .{ .theta = theta93, .topology = .ring, .seed = 2, .facts = 16 },
-        .{
-            .theta = stage7a.novel_first_theta,
-            .topology = .grid,
-            .seed = 2,
-            .facts = 8,
-        },
-    };
+test "F2.2 preserves F2.1 across the complete N=8 scaling box" {
+    const topologies = [_]scaling.TopologyKind{ .ring, .grid };
+    const densities = [_]usize{ 1, 2 };
 
-    for (fixtures) |fixture| {
-        var config = canonicalGapConfig(
-            fixture.seed,
-            fixture.topology,
-            4096,
-        );
-        config.world.fact_count = fixture.facts;
-        config.max_ticks = horizonForBudgetAndDrain(
-            config.decision_budget_per_operator,
-            config.clock_jitter,
-            config.latency_min,
-            config.latency_jitter,
-        );
+    for (frozen_profiles) |profile| {
+        for (densities) |density| {
+            for (topologies) |topology| {
+                var seed: u64 = 0;
+                while (seed < 3) : (seed += 1) {
+                    var config = canonicalGapConfig(seed, topology, 4096);
+                    config.world.fact_count = 8 * density;
+                    config.max_ticks = horizonForBudgetAndDrain(
+                        config.decision_budget_per_operator,
+                        config.clock_jitter,
+                        config.latency_min,
+                        config.latency_jitter,
+                    );
 
-        const scaled = try run(config, fixture.theta);
-        const prior = try f2_1.run(.{
-            .world = config.world,
-            .schedule_seed = config.schedule_seed,
-            .max_ticks = f2_1.horizonForBudget(
-                config.decision_budget_per_operator,
-                config.clock_jitter,
-            ),
-            .clock_jitter = config.clock_jitter,
-            .latency_min = config.latency_min,
-            .latency_jitter = config.latency_jitter,
-            .decision_budget_per_operator =
-                config.decision_budget_per_operator,
-        }, fixture.theta);
+                    const scaled = try run(config, profile.theta);
+                    const prior = try f2_1.run(.{
+                        .world = config.world,
+                        .schedule_seed = config.schedule_seed,
+                        .max_ticks = f2_1.horizonForBudget(
+                            config.decision_budget_per_operator,
+                            config.clock_jitter,
+                        ),
+                        .clock_jitter = config.clock_jitter,
+                        .latency_min = config.latency_min,
+                        .latency_jitter = config.latency_jitter,
+                        .decision_budget_per_operator =
+                            config.decision_budget_per_operator,
+                    }, profile.theta);
 
-        try std.testing.expect(scaled.success);
-        try std.testing.expect(!scaled.censored);
-        try std.testing.expectEqual(prior.success, scaled.success);
-        try std.testing.expectEqual(prior.elapsed_ticks, scaled.elapsed_ticks);
-        try std.testing.expectEqual(
-            prior.collector_final_facts,
-            scaled.collector_final_facts,
-        );
-        try std.testing.expectEqual(
-            prior.local_policy_ticks,
-            scaled.local_policy_ticks,
-        );
-        try std.testing.expectEqual(
-            prior.communication_units,
-            scaled.communication_units,
-        );
-        try std.testing.expectEqual(
-            prior.useful_deliveries,
-            scaled.useful_deliveries,
-        );
-        try std.testing.expectEqual(
-            prior.duplicate_deliveries,
-            scaled.duplicate_deliveries,
-        );
-        try std.testing.expectEqual(
-            prior.schedule_hash,
-            scaled.schedule_hash,
-        );
-        try std.testing.expectEqual(prior.trace_hash, scaled.trace_hash);
-        try std.testing.expectEqual(prior.violations, scaled.violations);
+                    try std.testing.expect(prior.success);
+                    try std.testing.expect(scaled.success);
+                    try std.testing.expect(!scaled.censored);
+                    try std.testing.expectEqual(prior.success, scaled.success);
+                    try std.testing.expectEqual(
+                        prior.elapsed_ticks,
+                        scaled.elapsed_ticks,
+                    );
+                    try std.testing.expectEqual(
+                        prior.collector_initial_facts,
+                        scaled.collector_initial_facts,
+                    );
+                    try std.testing.expectEqual(
+                        prior.collector_final_facts,
+                        scaled.collector_final_facts,
+                    );
+                    try std.testing.expectEqual(
+                        prior.local_policy_ticks,
+                        scaled.local_policy_ticks,
+                    );
+                    try std.testing.expectEqual(prior.actions, scaled.actions);
+                    try std.testing.expectEqual(
+                        prior.rejected_actions,
+                        scaled.rejected_actions,
+                    );
+                    try std.testing.expectEqual(
+                        prior.transport_attempts,
+                        scaled.transport_attempts,
+                    );
+                    try std.testing.expectEqual(
+                        prior.delivered_envelopes,
+                        scaled.delivered_envelopes,
+                    );
+                    try std.testing.expectEqual(
+                        prior.pending_envelopes,
+                        scaled.pending_envelopes,
+                    );
+                    try std.testing.expectEqual(
+                        prior.reordered_envelopes,
+                        scaled.reordered_envelopes,
+                    );
+                    try std.testing.expectEqual(
+                        prior.communication_units,
+                        scaled.communication_units,
+                    );
+                    try std.testing.expectEqual(
+                        prior.useful_deliveries,
+                        scaled.useful_deliveries,
+                    );
+                    try std.testing.expectEqual(
+                        prior.duplicate_deliveries,
+                        scaled.duplicate_deliveries,
+                    );
+                    try std.testing.expectEqual(
+                        prior.schedule_hash,
+                        scaled.schedule_hash,
+                    );
+                    try std.testing.expectEqual(
+                        prior.trace_hash,
+                        scaled.trace_hash,
+                    );
+                    try std.testing.expectEqual(
+                        prior.violations,
+                        scaled.violations,
+                    );
+                }
+            }
+        }
     }
 }
