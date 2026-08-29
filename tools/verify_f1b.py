@@ -13,8 +13,9 @@ import sys
 from collections import defaultdict
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-MANIFEST = ROOT / "modules" / "p2panda" / "Cargo.toml"
-LOCKFILE = ROOT / "modules" / "p2panda" / "Cargo.lock"
+MODULE_DIR = ROOT / "modules" / "p2panda"
+MANIFEST = MODULE_DIR / "Cargo.toml"
+LOCKFILE = MODULE_DIR / "Cargo.lock"
 BIN = ROOT / "modules" / "p2panda" / "target" / "release" / "starlings-stage7c-p2panda"
 K = 3
 
@@ -35,11 +36,16 @@ COMMON_ARGS = (
 )
 
 
-def run(*args: str, capture: bool = False, timeout_s: int | None = None):
+def run(
+    *args: str,
+    capture: bool = False,
+    timeout_s: int | None = None,
+    cwd: pathlib.Path = ROOT,
+):
     print("+", " ".join(args), file=sys.stderr)
     return subprocess.run(
         args,
-        cwd=ROOT,
+        cwd=cwd,
         check=True,
         stdout=subprocess.PIPE if capture else None,
         timeout=timeout_s,
@@ -115,11 +121,23 @@ def main() -> int:
     if zig != "0.16.0":
         raise SystemExit(f"zig 0.16.0 is required; found {zig}")
 
+    cargo_version = run(
+        "cargo", "--version",
+        capture=True,
+        cwd=MODULE_DIR,
+    ).stdout.decode().strip()
+    if " 1.98.0 " not in f" {cargo_version} ":
+        raise SystemExit(
+            f"Rust/Cargo 1.98.0 is required by modules/p2panda/rust-toolchain.toml; "
+            f"found {cargo_version}"
+        )
+
     run("zig", "build", "test")
     run(
         "cargo", "test", "--release",
         "--manifest-path", str(MANIFEST),
         timeout_s=600,
+        cwd=MODULE_DIR,
     )
     run(
         "cargo", "build", "--release",
