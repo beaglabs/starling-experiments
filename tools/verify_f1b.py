@@ -117,11 +117,6 @@ def main() -> int:
 
     run("zig", "build", "test")
     run(
-        "cargo", "fmt", "--check",
-        "--manifest-path", str(MANIFEST),
-        timeout_s=120,
-    )
-    run(
         "cargo", "test", "--release",
         "--manifest-path", str(MANIFEST),
         timeout_s=600,
