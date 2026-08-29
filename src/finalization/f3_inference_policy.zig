@@ -466,7 +466,7 @@ test "F3 c=0 refreshes once per operator then reuses cache" {
         .inference_gating_permille = 0,
     });
     try std.testing.expectEqual(
-        @as(u64, config.population_size),
+        @as(u64, @intCast(config.population_size)),
         result.inference_units,
     );
     try std.testing.expectEqual(
