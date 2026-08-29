@@ -83,7 +83,7 @@ fn writeHeader(io: std.Io) !void {
             "communication_units\tuseful\tduplicate\ttransport_duplicate_deliveries\t" ++
             "violations\tnever_transmitted\tdelivery_faulted\tcrashed_before_merge\t" ++
             "pending_at_censor\tunattributed\tudp_datagrams\tnetwork_polls\t" ++
-            "backpressure_events\tsend_failures\tmalformed_frames\t" ++
+            "backpressure_events\tsend_failures\tmalformed_frames\tschedule_hash\t" ++
             "envelope_accounted\tmissing_accounted\tcommunication_accounted\t" ++
             "fully_accounted\tresult_signature\n",
     );
@@ -97,7 +97,7 @@ fn writeResult(io: std.Io, result: f1c.Result) !void {
         "{s}\t{s}\t{d}\t{s}\t{s}\t{d}\t{d}\t{d}\t{d}\t{d}\t" ++
             "{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t" ++
             "{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t" ++
-            "{d}\t{d}\t{d}\t{s}\t{s}\t{s}\t{s}\t{x}\n",
+            "{d}\t{d}\t{d}\t{x}\t{s}\t{s}\t{s}\t{s}\t{x}\n",
         .{
             result.profile,
             result.topology.name(),
@@ -132,6 +132,7 @@ fn writeResult(io: std.Io, result: f1c.Result) !void {
             result.backpressure_events,
             result.send_failures,
             result.malformed_frames,
+            result.schedule_hash,
             yesNo(result.accounted()),
             yesNo(result.missingAccounted()),
             yesNo(result.communicationAccounted()),
