@@ -3,6 +3,9 @@ zig-out/
 __pycache__/
 *.pyc
 
+# Verifier-managed pinned dependency checkout.
+.deps/
+
 # Generated experimental outputs: freeze hashes/results in beaglabs/starlings.
 trials/*
 !trials/README.md
