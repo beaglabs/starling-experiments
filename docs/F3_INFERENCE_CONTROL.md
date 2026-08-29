@@ -368,3 +368,120 @@ The following are engineering failures, not scientific outcomes:
 - build/runtime failure.
 
 No canonical F3 result is claimed until the local verifier completes.
+
+## Canonical completion record — 2026-08-29
+
+The authoritative local verifier completed on macOS with Zig 0.16.0.
+
+~~~text
+F3 rows: 187
+F3 bytes: 25506
+F3 sha256:
+42e60db5b999d19319f00a254eafda0eebe3ae5c1c37a824ca155bcbd074bfb2
+
+F3 byte_identical_replay: yes
+F3 violations: 0
+F3 inference_accounting_failures: 0
+F3 c1000_corner_mismatches: 0
+F3 stage7b_anchor: PASS
+~~~
+
+Candidate-set and historical-corner validation:
+
+~~~text
+candidate_count: 134
+expected_candidate_count: 134
+corner_candidate_count: 134
+gated_candidates: 127
+expected_gated_candidates: 127
+invalid_theta: 0
+duplicate_theta: 0
+training_worlds: 48
+validation_worlds: 24
+
+c=1000 candidates: 134
+aggregate_checks: 268
+mismatches: 0
+~~~
+
+The validation frontier contains only ungated candidates:
+
+~~~text
+id=3
+theta=(500,0,250,1000,1000)
+failures=0
+rounds=1044
+communication=265191
+duplicates=177280
+computation=55968
+inference=55968
+reuse=0
+
+id=5
+theta=(750,250,0,500,1000)
+failures=0
+rounds=1448
+communication=250833
+duplicates=162874
+computation=77408
+inference=77408
+reuse=0
+~~~
+
+No candidate with `c < 1000` survived onto the validation-selected
+feasibility/resource frontier. Therefore there was no selected gated candidate
+for which an otherwise-identical ungated twin could demonstrate a strict
+inference reduction at equal zero failures.
+
+The frozen Stage 7B selected family remained feasible across all six hard
+holdout sets when evaluated ungated:
+
+~~~text
+id37:
+  hard failures = 0
+  communication = 28280472
+  inference = 1103040
+
+id51:
+  hard failures = 0
+  communication = 27458552
+  inference = 1100576
+
+id93:
+  hard failures = 0
+  communication = 29195088
+  inference = 1615264
+~~~
+
+### Interpretation
+
+F3 closes as a **LIMITATION**, not an engineering failure.
+
+The experiment establishes that the tested deterministic cache-reuse gate:
+
+~~~text
+refresh fresh Stage 7A action with probability c/1000
+otherwise reuse the previously cached action
+~~~
+
+does not produce a validation-selected zero-failure policy with strictly fewer
+inference units inside the frozen F3 search envelope.
+
+This does **not** establish that local inference control is impossible. It
+rejects this specific control parameterization/search result:
+
+- deterministic refresh probability indexed only by seed/operator/round;
+- cached action reuse when inference is skipped;
+- one five-dimensional Latin-hypercube search of 128 interior candidates;
+- the frozen Stage 7B training/validation world definitions.
+
+The selected frontier preferring `c=1000` means that, under this
+parameterization, reducing fresh local decision computation imposed enough cost
+in feasibility and/or the other Pareto dimensions that no gated candidate
+survived validation selection.
+
+Canonical verdict:
+
+~~~text
+F3 LIMITATION: local inference-control evidence complete
+~~~
