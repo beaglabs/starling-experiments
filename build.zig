@@ -3,11 +3,19 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const needs_libc = switch (target.result.os.tag) {
+        .macos, .ios, .tvos, .watchos, .visionos, .driverkit => true,
+        else => false,
+    };
 
     const starlings = b.dependency("starlings", .{
         .target = target,
         .optimize = optimize,
     });
+    const zquic = b.dependency("zquic", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("zquic");
 
     const core_tests = b.addTest(.{
         .root_module = starlings.module("starlings"),
@@ -32,6 +40,18 @@ pub fn build(b: *std.Build) void {
     });
     const run_f1a_tests = b.addRunArtifact(f1a_tests);
 
+    const f1c_test_module = b.createModule(.{
+        .root_source_file = b.path("src/f1c_test_root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = needs_libc,
+    });
+    f1c_test_module.addImport("zquic", zquic);
+    const f1c_tests = b.addTest(.{
+        .root_module = f1c_test_module,
+    });
+    const run_f1c_tests = b.addRunArtifact(f1c_tests);
+
     const test_step = b.step(
         "test",
         "Run protocol-core, frozen-substrate, and finalization tests",
@@ -39,11 +59,28 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_core_tests.step);
     test_step.dependOn(&run_substrate_tests.step);
     test_step.dependOn(&run_f1a_tests.step);
+    test_step.dependOn(&run_f1c_tests.step);
 
     addRunStep(b, target, optimize, "run-stage5a", "Run frozen Stage 5A CLI", "src/substrate/stage5a_run.zig");
     addRunStep(b, target, optimize, "run-stage7a", "Run frozen Stage 7A CLI", "src/substrate/stage7a_run.zig");
     addRunStep(b, target, optimize, "run-stage7c", "Run frozen Stage 7C CLI", "src/substrate/stage7c_run.zig");
     addRunStep(b, target, optimize, "run-f1a", "Run F1a canonical fault matrix", "src/f1a_run.zig");
+
+    const f1c_run_module = b.createModule(.{
+        .root_source_file = b.path("src/f1c_run.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = needs_libc,
+    });
+    f1c_run_module.addImport("zquic", zquic);
+    const f1c_exe = b.addExecutable(.{
+        .name = "run-f1c",
+        .root_module = f1c_run_module,
+    });
+    const f1c_run = b.addRunArtifact(f1c_exe);
+    if (b.args) |args| f1c_run.addArgs(args);
+    const f1c_step = b.step("run-f1c", "Run F1c zquic transport candidate");
+    f1c_step.dependOn(&f1c_run.step);
 }
 
 fn addRunStep(
