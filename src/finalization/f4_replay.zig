@@ -768,6 +768,27 @@ test "F4 deterministic population converges on ring" {
     try std.testing.expectEqual(full_mask, knowledge[collector_index]);
 }
 
+test "F4 deterministic population converges on grid" {
+    var knowledge = initialKnowledge(1);
+    var round: u32 = 0;
+
+    while (round < canonical_max_rounds and
+        knowledge[collector_index] != full_mask) : (round += 1)
+    {
+        var actions = [_]?Action{null} ** worker_count;
+        var worker: usize = 0;
+        while (worker < worker_count) : (worker += 1) {
+            actions[worker] = .{
+                .kind = .claim,
+                .facts = knowledge[worker],
+            };
+        }
+        _ = applyRound(&knowledge, actions, .grid);
+    }
+
+    try std.testing.expectEqual(full_mask, knowledge[collector_index]);
+}
+
 test "F4 grid topology is connected for five workers" {
     const n0 = neighbors(.grid, 0);
     try std.testing.expectEqualSlices(usize, &.{ 1, 3 }, n0.slice());
