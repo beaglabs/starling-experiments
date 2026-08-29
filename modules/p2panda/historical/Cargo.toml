@@ -1,0 +1,17 @@
+[package]
+name = "starlings-stage7c-p2panda"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+
+[dependencies]
+anyhow = "1"
+futures-util = "0.3"
+p2panda = { git = "https://github.com/beaglabs/p2panda", rev = "80051611b7b41250815a40c945ae7bece84aa249", package = "p2panda" }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

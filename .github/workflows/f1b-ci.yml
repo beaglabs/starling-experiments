@@ -1,0 +1,43 @@
+name: F1b engineering gate
+
+on:
+  push:
+    branches:
+      - feat/f1b-p2panda-wired
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Zig 0.16.0
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Install Rust 1.98.0
+        uses: dtolnay/rust-toolchain@1.98.0
+        with:
+          components: rustfmt,clippy
+
+      - name: Zig tests
+        run: zig build test
+
+      - name: Rust tests
+        run: cargo test --release --manifest-path modules/p2panda/Cargo.toml
+
+      - name: Rust release build
+        run: cargo build --release --manifest-path modules/p2panda/Cargo.toml
+
+      - name: Upload resolved lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: f1b-cargo-lock
+          path: modules/p2panda/Cargo.lock
+          if-no-files-found: error
