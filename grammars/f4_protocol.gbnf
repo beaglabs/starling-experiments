@@ -1,0 +1,6 @@
+root ::= interaction
+interaction ::= claim | query-evidence
+claim ::= "CLAIM " fact-list
+query-evidence ::= "QUERY EVIDENCE " fact
+fact-list ::= fact | fact "," fact-list
+fact ::= "A" | "B" | "C" | "D" | "E"
