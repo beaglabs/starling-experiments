@@ -24,8 +24,7 @@ pub const ControllerKind = enum {
             .always_refresh, .knowledge_change => false,
             .knowledge_or_stale,
             .knowledge_or_stale_age4,
-            .knowledge_or_stale_age8,
-            => true,
+            .knowledge_or_stale_age8 => true,
         };
     }
 
