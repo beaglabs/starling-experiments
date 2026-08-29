@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """S0 reproducibility gate.
 
-This script intentionally fails closed. It first proves that the re-materialized
-historical source files are byte-identical Git blobs, then runs the package and
-historical validation gates, regenerates the Stage 7C first suite, and requires
-its canonical SHA-256 to match the frozen value.
+This script intentionally fails closed. It proves that the re-materialized
+historical source files are byte-identical Git blobs, materializes the exact
+pinned private Starlings core through ordinary Git SSH authentication, runs the
+package and historical validation gates, regenerates the Stage 7C first suite,
+and requires its canonical SHA-256 to match the frozen value.
 """
 
 from __future__ import annotations
@@ -16,7 +17,15 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-EXPECTED_STAGE7C_SHA256 = "c89d1985af0479191126fca91265b1fe7f49e7b34db471e13c74e8bb28195a36"
+CORE_DIR = ROOT / ".deps" / "starlings"
+CORE_REMOTE = "git@github.com:beaglabs/starlings.git"
+PINNED_CORE_COMMIT = "7c1152b82f540fafe072bcf64ef99904a05be044"
+PINNED_CORE_PACKAGE_HASH = (
+    "starlings-0.1.0-3sAXWncEAgDdDV5wfBEssJhtUpW2Spm-u8gDHJOFPaKE"
+)
+EXPECTED_STAGE7C_SHA256 = (
+    "c89d1985af0479191126fca91265b1fe7f49e7b34db471e13c74e8bb28195a36"
+)
 
 FROZEN_GIT_BLOBS = {
     "src/substrate/stage5/stage5a_scaling.zig": "0b45d61506611b9b2d370391a6eafe5b5de0569b",
@@ -46,7 +55,10 @@ def check_frozen_sources() -> None:
     print(f"frozen sources: {len(FROZEN_GIT_BLOBS)} byte-identical blobs")
 
 
-def run(*args: str, capture: bool = False) -> subprocess.CompletedProcess[bytes]:
+def run(
+    *args: str,
+    capture: bool = False,
+) -> subprocess.CompletedProcess[bytes]:
     print("+", " ".join(args), file=sys.stderr)
     return subprocess.run(
         args,
@@ -56,17 +68,100 @@ def run(*args: str, capture: bool = False) -> subprocess.CompletedProcess[bytes]
     )
 
 
+def capture_text(*args: str) -> str:
+    return run(*args, capture=True).stdout.decode().strip()
+
+
+def materialize_core() -> None:
+    if shutil.which("git") is None:
+        raise SystemExit("git is required on PATH")
+
+    CORE_DIR.parent.mkdir(parents=True, exist_ok=True)
+
+    if CORE_DIR.exists() and not (CORE_DIR / ".git").is_dir():
+        raise SystemExit(
+            f"{CORE_DIR} exists but is not a Git checkout; remove it and re-run"
+        )
+
+    if not CORE_DIR.exists():
+        run("git", "clone", "--no-checkout", CORE_REMOTE, str(CORE_DIR))
+
+    remote = capture_text(
+        "git", "-C", str(CORE_DIR), "remote", "get-url", "origin"
+    )
+    if remote != CORE_REMOTE:
+        raise SystemExit(
+            "unexpected Starlings dependency origin:\n"
+            f"expected: {CORE_REMOTE}\n"
+            f"actual:   {remote}"
+        )
+
+    run(
+        "git",
+        "-C",
+        str(CORE_DIR),
+        "fetch",
+        "--depth=1",
+        "origin",
+        PINNED_CORE_COMMIT,
+    )
+    run(
+        "git",
+        "-C",
+        str(CORE_DIR),
+        "checkout",
+        "--detach",
+        "--force",
+        PINNED_CORE_COMMIT,
+    )
+    run(
+        "git",
+        "-C",
+        str(CORE_DIR),
+        "reset",
+        "--hard",
+        PINNED_CORE_COMMIT,
+    )
+
+    actual = capture_text("git", "-C", str(CORE_DIR), "rev-parse", "HEAD")
+    if actual != PINNED_CORE_COMMIT:
+        raise SystemExit(
+            "pinned core checkout mismatch:\n"
+            f"expected: {PINNED_CORE_COMMIT}\n"
+            f"actual:   {actual}"
+        )
+
+    print(f"pinned core: {actual}")
+    print(f"recorded core package hash: {PINNED_CORE_PACKAGE_HASH}")
+
+
 def main() -> int:
     if shutil.which("zig") is None:
         raise SystemExit("zig 0.16.0 is required on PATH")
 
+    zig_version = capture_text("zig", "version")
+    if zig_version != "0.16.0":
+        raise SystemExit(
+            f"zig 0.16.0 is required; found {zig_version}"
+        )
+
     check_frozen_sources()
+    materialize_core()
+
     run("zig", "build", "test")
     run("zig", "build", "run-stage5a", "--", "validate")
     run("zig", "build", "run-stage7a", "--", "validate")
     run("zig", "build", "run-stage7c", "--", "validate")
 
-    suite = run("zig", "build", "-Doptimize=ReleaseFast", "run-stage7c", "--", "suite", capture=True).stdout
+    suite = run(
+        "zig",
+        "build",
+        "-Doptimize=ReleaseFast",
+        "run-stage7c",
+        "--",
+        "suite",
+        capture=True,
+    ).stdout
     actual = hashlib.sha256(suite).hexdigest()
 
     trial_path = ROOT / "trials" / "s0-stage7c.tsv"
