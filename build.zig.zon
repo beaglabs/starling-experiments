@@ -1,0 +1,22 @@
+.{
+    .name = .starling_experiments,
+    .fingerprint = 0xc3fa0da06e2b4a91,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .starlings = .{
+            .url = "git+https://github.com/beaglabs/starlings#7c1152b82f540fafe072bcf64ef99904a05be044",
+            // S0 is not accepted until Zig's content hash is inserted here.
+            // Run: zig fetch --save git+https://github.com/beaglabs/starlings#7c1152b82f540fafe072bcf64ef99904a05be044
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+        "src",
+        "tools",
+        "trials",
+        "models",
+    },
+}
