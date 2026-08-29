@@ -58,16 +58,28 @@ def run_world(
     seed: int,
     fault: str,
 ) -> dict[str, str]:
-    proc = run(
+    args = (
         str(BIN),
         "--profile", profile,
         "--topology", topology,
         "--seed", str(seed),
         "--fault", fault,
         *COMMON_ARGS,
-        capture=True,
-        timeout_s=45,
     )
+    print("+", " ".join(args), file=sys.stderr)
+    proc = subprocess.run(
+        args,
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=45,
+    )
+
+    stderr = proc.stderr.decode(errors="replace")
+    if stderr:
+        print(stderr, end="" if stderr.endswith("\n") else "\n", file=sys.stderr)
+
     rows = list(
         csv.DictReader(io.StringIO(proc.stdout.decode()), delimiter="\t")
     )
@@ -76,7 +88,14 @@ def run_world(
             f"expected one F1b result row for {profile}/{topology}/{seed}/{fault}; "
             f"got {len(rows)}"
         )
-    return rows[0]
+
+    return {
+        **rows[0],
+        "transport_panics": str(stderr.count("panicked at")),
+        "unfold_panics": str(
+            stderr.count("must not be polled after it returned")
+        ),
+    }
 
 
 def int_field(row: dict[str, str], name: str) -> int:
@@ -175,6 +194,12 @@ def main() -> int:
                     limitations.append(
                         f"fault-free p2panda sync errors: {profile}/{topology}/{seed}"
                     )
+                if int_field(row, "transport_panics") != 0:
+                    limitations.append(
+                        f"fault-free p2panda background panic: "
+                        f"{profile}/{topology}/{seed} "
+                        f"(unfold={row['unfold_panics']})"
+                    )
                 row = {"phase": "fault_free", "repeat": "0", **row}
                 records.append(row)
 
@@ -204,6 +229,12 @@ def main() -> int:
             if int_field(row, "unattributed") != 0:
                 limitations.append(
                     f"audit unattributed loss: {profile}/{topology}/{seed}/r{repeat}"
+                )
+            if int_field(row, "transport_panics") != 0:
+                limitations.append(
+                    f"audit p2panda background panic: "
+                    f"{profile}/{topology}/{seed}/r{repeat} "
+                    f"(unfold={row['unfold_panics']})"
                 )
             row = {
                 "phase": "determinism_audit",
@@ -244,6 +275,12 @@ def main() -> int:
             if int_field(row, "unattributed") != 0:
                 limitations.append(
                     f"contested unattributed loss: {profile}/{topology}/{seed}/{fault}"
+                )
+            if int_field(row, "transport_panics") != 0:
+                limitations.append(
+                    f"contested p2panda background panic: "
+                    f"{profile}/{topology}/{seed}/{fault} "
+                    f"(unfold={row['unfold_panics']})"
                 )
             if fault == "partition" and int_field(row, "partitioned") == 0:
                 hard_failures.append(
@@ -305,9 +342,13 @@ def main() -> int:
     unattributed = sum(int_field(r, "unattributed") for r in records)
     pending = sum(int_field(r, "pending_at_censor") for r in records)
     sync_errors = sum(int_field(r, "sync_errors") for r in records)
+    transport_panics = sum(int_field(r, "transport_panics") for r in records)
+    unfold_panics = sum(int_field(r, "unfold_panics") for r in records)
     print(f"unattributed_missing: {unattributed}")
     print(f"pending_at_censor: {pending}")
     print(f"sync_errors: {sync_errors}")
+    print(f"transport_panics: {transport_panics}")
+    print(f"unfold_panics: {unfold_panics}")
 
     for key in sorted(signatures):
         values = signatures[key]
