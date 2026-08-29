@@ -596,3 +596,63 @@ test "F3b semantic staleness detects exhausted cached action" {
     state.sent.clear();
     try std.testing.expect(!cachedActionIsStale(action, state, 2));
 }
+
+
+test "F3b refresh reasons detect knowledge change and max age" {
+    var state = scaling.State{};
+    state.knowledge.set(0);
+
+    var snapshot = scaling.BitSet{};
+    var facts = scaling.BitSet{};
+    facts.set(0);
+    const action = scaling.Action{
+        .facts = facts,
+        .selected = 1,
+        .next_cursor = 1,
+    };
+
+    try std.testing.expectEqual(
+        RefreshReason.knowledge,
+        refreshReason(
+            .knowledge_change,
+            state,
+            true,
+            action,
+            snapshot,
+            1,
+            2,
+            .{
+                .population_size = 8,
+                .fact_count = 2,
+                .topology = .ring,
+                .redundancy = 2,
+                .bandwidth = 1,
+                .seed = 0,
+                .max_rounds = 64,
+            },
+        ),
+    );
+
+    snapshot = state.knowledge;
+    try std.testing.expectEqual(
+        RefreshReason.age,
+        refreshReason(
+            .knowledge_or_stale_age4,
+            state,
+            true,
+            action,
+            snapshot,
+            1,
+            5,
+            .{
+                .population_size = 8,
+                .fact_count = 2,
+                .topology = .ring,
+                .redundancy = 2,
+                .bandwidth = 1,
+                .seed = 0,
+                .max_rounds = 64,
+            },
+        ),
+    );
+}
