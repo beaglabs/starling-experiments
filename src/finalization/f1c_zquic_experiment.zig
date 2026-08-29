@@ -745,6 +745,33 @@ fn resultSignature(result: Result) u64 {
     return hash;
 }
 
+test "F1c result accounting identities are exact" {
+    var result = Result{
+        .profile = "test",
+        .topology = .ring,
+        .seed = 0,
+        .fault = .no_fault,
+        .fact_count = 4,
+    };
+    result.collector_final = 3;
+    result.transport_attempts = 2;
+    result.delivered = 1;
+    result.pending = 1;
+    result.communication_units = 2;
+    result.useful = 1;
+    result.duplicate = 1;
+    result.never_transmitted = 1;
+
+    try std.testing.expect(result.accounted());
+    try std.testing.expect(result.missingAccounted());
+    try std.testing.expect(result.communicationAccounted());
+    try std.testing.expect(result.fullyAccounted());
+
+    result.transport_attempts += 1;
+    try std.testing.expect(!result.accounted());
+    try std.testing.expect(!result.fullyAccounted());
+}
+
 test "F1c canonical profiles remain frozen" {
     try std.testing.expect(profileTheta("theta37") != null);
     try std.testing.expect(profileTheta("theta51") != null);
