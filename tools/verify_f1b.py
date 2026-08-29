@@ -14,6 +14,7 @@ from collections import defaultdict
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "modules" / "p2panda" / "Cargo.toml"
+LOCKFILE = ROOT / "modules" / "p2panda" / "Cargo.lock"
 BIN = ROOT / "modules" / "p2panda" / "target" / "release" / "starlings-stage7c-p2panda"
 K = 3
 
@@ -116,10 +117,23 @@ def main() -> int:
 
     run("zig", "build", "test")
     run(
+        "cargo", "fmt", "--check",
+        "--manifest-path", str(MANIFEST),
+        timeout_s=120,
+    )
+    run(
+        "cargo", "test", "--release",
+        "--manifest-path", str(MANIFEST),
+        timeout_s=600,
+    )
+    run(
         "cargo", "build", "--release",
         "--manifest-path", str(MANIFEST),
         timeout_s=600,
     )
+    if not LOCKFILE.exists():
+        raise SystemExit("Cargo did not materialize modules/p2panda/Cargo.lock")
+    lock_sha = hashlib.sha256(LOCKFILE.read_bytes()).hexdigest()
 
     records: list[dict[str, str]] = []
     hard_failures: list[str] = []
@@ -260,6 +274,7 @@ def main() -> int:
     print(f"F1b rows: {len(records)}")
     print(f"F1b bytes: {len(data)}")
     print(f"F1b sha256: {digest}")
+    print(f"Cargo.lock sha256: {lock_sha}")
     print(f"fault_free_rows: {len(fault_free)}")
     print(
         "fault_free_successes: "
