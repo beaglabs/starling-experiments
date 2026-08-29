@@ -320,7 +320,8 @@ fn writeRow(
         io,
         out,
         "{s}\t{s}\t{d}\t{s}\t{s}\t{d}\t{d}\t{d}\t{d}\t{d}\t" ++
-            "{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{s}\n",
+            "{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t" ++
+            "{d}\t{d}\t{s}\t{s}\n",
         .{
             phase,
             split.name(),
