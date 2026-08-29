@@ -340,3 +340,269 @@ F3 itself remains open after an F3b limitation; the next distinct mechanism
 would be uncertainty/novelty-triggered or adaptive-budget inference control.
 
 No canonical F3b result is claimed until the local verifier completes.
+
+## Canonical completion record — 2026-08-29
+
+The authoritative local verifier completed on macOS with Zig 0.16.0.
+
+~~~text
+F3b rows: 85
+F3b bytes: 11329
+F3b sha256:
+eb4237fdf5e6ac309b29f01c16345f9ff6507b8806ab986b15fbb3c9e080347a
+
+F3b byte_identical_replay: yes
+F3b violations: 0
+F3b inference_accounting_failures: 0
+F3b communication_accounting_failures: 0
+F3b paired_baseline_mismatches: 0
+~~~
+
+Candidate and baseline gates:
+
+~~~text
+candidate_count: 15
+expected_candidate_count: 15
+baseline_candidates: 3
+invalid_theta: 0
+duplicate_candidates: 0
+training_worlds: 48
+validation_worlds: 24
+
+paired baseline ids: 37,51,93
+aggregate_checks: 6
+mismatches: 0
+~~~
+
+### Validation frontier
+
+~~~text
+id=2 base=37 controller=knowledge_or_stale
+  failures=0
+  rounds=1046
+  communication=257666
+  duplicates=169774
+  computation=55936
+  inference=54769
+  reuse=1167
+  hard_failures=0
+
+id=4 base=37 controller=knowledge_or_stale_age8
+  failures=0
+  rounds=1046
+  communication=257666
+  duplicates=169774
+  computation=55936
+  inference=54769
+  reuse=1167
+  hard_failures=0
+
+id=7 base=51 controller=knowledge_or_stale
+  failures=0
+  rounds=1054
+  communication=253171
+  duplicates=165064
+  computation=56576
+  inference=55017
+  reuse=1559
+  hard_failures=0
+
+id=9 base=51 controller=knowledge_or_stale_age8
+  failures=0
+  rounds=1054
+  communication=253171
+  duplicates=165064
+  computation=56576
+  inference=55017
+  reuse=1559
+  hard_failures=0
+
+id=10 base=93 controller=always_refresh
+  failures=0
+  rounds=1435
+  communication=250805
+  duplicates=162945
+  computation=76704
+  inference=76704
+  reuse=0
+  hard_failures=0
+
+id=12 base=93 controller=knowledge_or_stale
+  failures=0
+  rounds=1437
+  communication=251061
+  duplicates=163160
+  computation=76832
+  inference=75701
+  reuse=1131
+  hard_failures=0
+
+id=13 base=93 controller=knowledge_or_stale_age4
+  failures=0
+  rounds=1437
+  communication=251061
+  duplicates=163160
+  computation=76832
+  inference=75701
+  reuse=1131
+  hard_failures=0
+
+id=14 base=93 controller=knowledge_or_stale_age8
+  failures=0
+  rounds=1437
+  communication=251061
+  duplicates=163160
+  computation=76832
+  inference=75701
+  reuse=1131
+  hard_failures=0
+~~~
+
+### Paired validation improvements
+
+Against the exact always-refresh twin for the same frozen Stage 7B theta:
+
+~~~text
+base 37 / knowledge_or_stale:
+  saved inference = 1167
+  rounds delta = 0
+  communication delta = -723
+  duplicate delta = -711
+  computation delta = 0
+  hard failures = 0
+
+base 37 / knowledge_or_stale_age8:
+  same canonical validation measurements
+
+base 51 / knowledge_or_stale:
+  saved inference = 1559
+  rounds delta = 0
+  communication delta = -2148
+  duplicate delta = -2147
+  computation delta = 0
+  hard failures = 0
+
+base 51 / knowledge_or_stale_age8:
+  same canonical validation measurements
+
+base 93 / knowledge_or_stale:
+  saved inference = 1003
+  rounds delta = +2
+  communication delta = +256
+  duplicate delta = +215
+  computation delta = +128
+  hard failures = 0
+
+base 93 / knowledge_or_stale_age4:
+  same canonical validation measurements
+
+base 93 / knowledge_or_stale_age8:
+  same canonical validation measurements
+~~~
+
+Every promoted state-aware controller remained zero-failure across all six
+hard holdout families.
+
+The paired always-refresh hard baselines also remained zero-failure:
+
+~~~text
+id37:
+  failures=0
+  communication=28280472
+  inference=1103040
+
+id51:
+  failures=0
+  communication=27458552
+  inference=1100576
+
+id93:
+  failures=0
+  communication=29195088
+  inference=1615264
+~~~
+
+### Interpretation
+
+F3b closes as a **PASS**.
+
+The decisive result is that `knowledge_or_stale` is promoted for all three
+frozen Stage 7B base policies:
+
+- it preserves zero validation failures;
+- it uses strictly fewer inference units than the exact always-refresh twin;
+- it lies on the validation feasibility/resource Pareto frontier;
+- it remains zero-failure across all six hard holdout families.
+
+For bases 37 and 51, the controller is strictly better on the measured
+validation resource vector except that total policy/computation calls remain
+equal:
+
+~~~text
+same rounds
+same computation calls
+less inference
+less communication
+fewer duplicates
+~~~
+
+Base 51 shows the largest validation inference reduction:
+
+~~~text
+1559 fewer inference units
+2148 fewer communication units
+2147 fewer duplicate units
+0 extra rounds
+0 extra computation calls
+0 hard failures
+~~~
+
+Base 93 demonstrates the tradeoff boundary: state-aware reuse still saves 1003
+inference units and generalizes with zero hard failures, but costs two rounds,
+256 communication units, 215 duplicate units and 128 computation calls on the
+validation aggregate. Both the always-refresh and state-aware variants remain
+on the Pareto frontier.
+
+The age-bounded variants do not improve the canonical validation measurements
+over plain `knowledge_or_stale` in this experiment. Therefore the simplest
+validated controller is:
+
+~~~text
+refresh if:
+  no cached action exists
+  OR local knowledge changed since last inference
+  OR cached action became structurally invalid
+  OR cached action is semantically stale:
+       unsent local facts remain
+       AND cached selected facts are already sent
+
+otherwise:
+  reuse cached action
+~~~
+
+### F3 conclusion
+
+F3a and F3b together answer the broader local-inference-control question:
+
+~~~text
+blind probabilistic/round-indexed gating:
+  LIMITATION
+
+state-aware knowledge/staleness gating:
+  PASS
+~~~
+
+The evidence supports retaining the validated communication policy surface:
+
+~~~text
+theta = (n,e,r,u)
+~~~
+
+and treating inference control as a separate deterministic local controller
+rather than adding a probabilistic `c` dimension to theta.
+
+Canonical verdict:
+
+~~~text
+F3b PASS: state-aware inference-control evidence complete
+~~~
