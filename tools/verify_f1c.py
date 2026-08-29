@@ -135,6 +135,18 @@ def structural_check(
             f"{label}: delivered communication exceeds attempted communication"
         )
 
+    expected_fully = (
+        row["envelope_accounted"] == "yes"
+        and row["missing_accounted"] == "yes"
+        and row["communication_accounted"] == "yes"
+        and int_field(row, "unattributed") == 0
+    )
+    actual_fully = row["fully_accounted"] == "yes"
+    if actual_fully != expected_fully:
+        hard_failures.append(
+            f"{label}: fully_accounted flag is internally inconsistent"
+        )
+
 
 def main() -> int:
     if shutil.which("zig") is None:
