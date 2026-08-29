@@ -834,22 +834,47 @@ async fn run_node(
                     continue;
                 }
 
-                let recipients = recipients(config.topology, node_index, config.nodes);
+                let intended_recipients =
+                    recipients(config.topology, node_index, config.nodes);
                 state.sequence = state.sequence.wrapping_add(1);
-                let envelope = Envelope {
+                let mut envelope = Envelope {
                     run_nonce,
                     sender: node_index,
                     sequence: state.sequence,
                     logical_round: state.round,
-                    recipients: recipients.clone(),
+                    recipients: intended_recipients.clone(),
                     facts: facts.clone(),
                 };
 
+                let mut active_recipients =
+                    Vec::with_capacity(intended_recipients.len());
                 {
                     let mut audit = ledger.lock().expect("F1b ledger poisoned");
-                    for recipient in &recipients {
+                    for recipient in &intended_recipients {
                         audit.record_attempt(&envelope, *recipient);
+                        let key = (node_index, state.sequence, *recipient);
+                        if is_partitioned(&config, node_index, *recipient, state.round) {
+                            audit.close(key, &facts, Terminal::Partitioned);
+                        } else if is_crashed(&config, *recipient, state.round) {
+                            audit.close(key, &facts, Terminal::Crashed);
+                        } else {
+                            active_recipients.push(*recipient);
+                        }
                     }
+                }
+                envelope.recipients = active_recipients;
+
+                if envelope.recipients.is_empty() {
+                    if action.reset_sent != 0 {
+                        state.sent.fill(0);
+                    }
+                    for fact in &facts {
+                        set_fact(&mut state.sent, *fact);
+                    }
+                    state.cursor = action.next_cursor;
+                    stats.actions += 1;
+                    stats.logical_messages += intended_recipients.len() as u64;
+                    continue;
                 }
 
                 let operation = async {
@@ -899,7 +924,7 @@ async fn run_node(
                 state.cursor = action.next_cursor;
 
                 stats.actions += 1;
-                stats.logical_messages += recipients.len() as u64;
+                stats.logical_messages += intended_recipients.len() as u64;
             }
             event = rx.next() => {
                 let event = event.context("topic stream closed before run completed")?;
@@ -1385,7 +1410,9 @@ fn validation_network_id(config: &Config) -> [u8; 32] {
     let base = run_nonce(config) ^ 0x4631425f4e455449;
     let mut result = [0_u8; 32];
     for index in 0..4 {
-        let word = mix64(base ^ ((index as u64 + 1) * 0x9e3779b97f4a7c15));
+        let word = mix64(
+            base ^ (index as u64 + 1).wrapping_mul(0x9e3779b97f4a7c15),
+        );
         result[index * 8..(index + 1) * 8].copy_from_slice(&word.to_le_bytes());
     }
     result
