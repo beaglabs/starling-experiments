@@ -385,6 +385,7 @@ impl Ledger {
             partitioned: self.partitioned.len() as u64,
             crashed: self.crashed.len() as u64,
             pending: self.pending_count() as u64,
+            interface_violations: self.duplicate_terminals,
         }
     }
 
@@ -444,6 +445,7 @@ struct LedgerCounts {
     partitioned: u64,
     crashed: u64,
     pending: u64,
+    interface_violations: u64,
 }
 
 impl LedgerCounts {
@@ -638,12 +640,12 @@ async fn main() -> Result<()> {
 
     if !config.no_header {
         println!(
-            "profile\ttopology\tseed\tfault\tsim_success\tdist_success\tcollector_initial\tcollector_final\tmax_local_round\tactions\tlogical_messages\ttransport_attempts\tdelivered\tpartitioned\tcrashed\tpending\tattempted_communication_units\tcommunication_units\tuseful\tduplicate\tduplicate_envelopes\tp2panda_local_ops\tp2panda_remote_ops\tsync_sessions\tsync_errors\tpolicy_errors\tnever_transmitted\tdelivery_faulted\tcrashed_before_merge\tpending_at_censor\tunattributed\tenvelope_accounted\tmissing_accounted\tcommunication_accounted\tfully_accounted\tresult_signature"
+            "profile\ttopology\tseed\tfault\tsim_success\tdist_success\tcollector_initial\tcollector_final\tmax_local_round\tactions\tlogical_messages\ttransport_attempts\tdelivered\tpartitioned\tcrashed\tpending\tledger_interface_violations\tattempted_communication_units\tcommunication_units\tuseful\tduplicate\tduplicate_envelopes\tp2panda_local_ops\tp2panda_remote_ops\tsync_sessions\tsync_errors\tpolicy_errors\tnever_transmitted\tdelivery_faulted\tcrashed_before_merge\tpending_at_censor\tunattributed\tenvelope_accounted\tmissing_accounted\tcommunication_accounted\tfully_accounted\tresult_signature"
         );
     }
 
     println!(
-        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:016x}",
+        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:016x}",
         config.profile,
         config.topology.name(),
         config.seed,
@@ -660,6 +662,7 @@ async fn main() -> Result<()> {
         counts.partitioned,
         counts.crashed,
         counts.pending,
+        counts.interface_violations,
         attempted_communication_units,
         aggregate.communication_units,
         aggregate.useful_deliveries,
@@ -1350,6 +1353,7 @@ fn result_signature(
         counts.partitioned,
         counts.crashed,
         counts.pending,
+        counts.interface_violations,
         attempted_communication_units,
         aggregate.communication_units,
         aggregate.useful_deliveries,
