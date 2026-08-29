@@ -85,6 +85,7 @@ pub const Runtime = struct {
                     .alpn = alpn,
                     .raw_application_streams = true,
                 }, client);
+                errdefer client.deinit();
 
                 const server_addr = try Address.parseIp4(
                     "127.0.0.1",
@@ -160,7 +161,7 @@ pub const Runtime = struct {
             }
 
             consumed += accepted;
-            link.send_offset += accepted;
+            link.send_offset += @as(u64, @intCast(accepted));
             if (consumed < frame.len) {
                 try self.pump(0);
             }
