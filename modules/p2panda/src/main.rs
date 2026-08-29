@@ -91,8 +91,11 @@ const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
 const OPERATION_TIMEOUT: Duration = Duration::from_secs(10);
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
-fn transient_node_builder() -> p2panda::NodeBuilder {
-    p2panda::builder()
+fn transient_node_builder(network_id: [u8; 32]) -> p2panda::NodeBuilder {
+    // No relay or bootstrap is configured: the pinned P2Panda API therefore
+    // remains LAN-only. A run-specific network ID prevents unrelated local
+    // P2Panda nodes from participating in the validation network.
+    p2panda::builder().network_id(network_id)
 }
 
 async fn bounded<T>(
@@ -284,6 +287,7 @@ struct Ledger {
     collector_delivered: Vec<u64>,
     collector_partitioned: Vec<u64>,
     collector_crashed: Vec<u64>,
+    collector_erased: Vec<bool>,
 }
 
 impl Ledger {
@@ -293,6 +297,7 @@ impl Ledger {
             collector_delivered: vec![0; facts],
             collector_partitioned: vec![0; facts],
             collector_crashed: vec![0; facts],
+            collector_erased: vec![false; facts],
             ..Self::default()
         }
     }
@@ -311,14 +316,26 @@ impl Ledger {
     }
 
     fn close(&mut self, key: AttemptKey, facts: &[u16], terminal: Terminal) {
-        let inserted = match terminal {
-            Terminal::Delivered => self.delivered.insert(key),
-            Terminal::Partitioned => self.partitioned.insert(key),
-            Terminal::Crashed => self.crashed.insert(key),
-        };
-        if !inserted {
+        if !self.attempted.contains_key(&key) {
+            // A receive which cannot be tied back to a Starlings logical
+            // attempt is an interface violation, not a new implicit attempt.
             self.duplicate_terminals += 1;
             return;
+        }
+        if self.is_closed(key) {
+            self.duplicate_terminals += 1;
+            return;
+        }
+        match terminal {
+            Terminal::Delivered => {
+                self.delivered.insert(key);
+            }
+            Terminal::Partitioned => {
+                self.partitioned.insert(key);
+            }
+            Terminal::Crashed => {
+                self.crashed.insert(key);
+            }
         }
 
         if key.2 == 0 {
@@ -337,6 +354,21 @@ impl Ledger {
         self.delivered.contains(&key)
             || self.partitioned.contains(&key)
             || self.crashed.contains(&key)
+    }
+
+    fn attempted_communication_units(&self) -> u64 {
+        self.attempted
+            .values()
+            .map(|facts| facts.len() as u64)
+            .sum()
+    }
+
+    fn mark_collector_erasure(&mut self, before: &[u64], after: &[u64], fact_count: u16) {
+        for fact in 0..fact_count {
+            if has_fact(before, fact) && !has_fact(after, fact) {
+                self.collector_erased[fact as usize] = true;
+            }
+        }
     }
 
     fn pending_count(&self) -> usize {
@@ -373,10 +405,12 @@ impl Ledger {
                 result.delivery_faulted += 1;
             } else if self.collector_attempted[i] == 0 {
                 result.never_transmitted += 1;
-            } else if self.collector_delivered[i] > 0 {
-                // A delivered fact absent at final state can only be explained by
-                // crash-reset erasure at the collector.
+            } else if self.collector_erased[i] {
                 result.crashed_before_merge += 1;
+            } else if self.collector_delivered[i] > 0 {
+                // The collector previously accepted this fact, but the ledger
+                // has no proven crash-reset erasure. Do not hide state loss.
+                result.unattributed += 1;
             } else {
                 result.unattributed += 1;
             }
@@ -501,6 +535,7 @@ async fn main() -> Result<()> {
 
     let topic = Topic::random();
     let run_nonce = run_nonce(&config);
+    let network_id = validation_network_id(&config);
     let ledger = Arc::new(Mutex::new(Ledger::new(config.facts as usize)));
 
     let mut node_guards: Vec<Node> = Vec::with_capacity(config.nodes as usize);
@@ -510,7 +545,7 @@ async fn main() -> Result<()> {
         let node = bounded(
             &format!("spawn p2panda node {node_index}"),
             STARTUP_TIMEOUT,
-            async { Ok(transient_node_builder().spawn().await?) },
+            async { Ok(transient_node_builder(network_id).spawn().await?) },
         )
         .await?;
         let pair = bounded(
@@ -578,28 +613,37 @@ async fn main() -> Result<()> {
 
     let ledger = ledger.lock().expect("F1b ledger poisoned");
     let counts = ledger.counts();
+    let attempted_communication_units = ledger.attempted_communication_units();
     let missing = ledger.classify_missing(&collector.collector_knowledge, config.facts);
     let missing_total = config.facts as usize - collector.final_facts;
     let missing_accounted = missing.total() == missing_total;
+    let communication_accounted =
+        aggregate.communication_units ==
+            aggregate.useful_deliveries + aggregate.duplicate_deliveries;
     let fully_accounted =
-        counts.accounted() && missing_accounted && missing.unattributed == 0;
+        counts.accounted()
+            && missing_accounted
+            && missing.unattributed == 0
+            && communication_accounted;
     let signature = result_signature(
         &config,
         collector,
         &aggregate,
         counts,
+        attempted_communication_units,
         missing,
+        communication_accounted,
         fully_accounted,
     );
 
     if !config.no_header {
         println!(
-            "profile\ttopology\tseed\tfault\tsim_success\tdist_success\tcollector_initial\tcollector_final\tmax_local_round\tactions\tlogical_messages\ttransport_attempts\tdelivered\tpartitioned\tcrashed\tpending\tcommunication_units\tuseful\tduplicate\tduplicate_envelopes\tp2panda_local_ops\tp2panda_remote_ops\tsync_sessions\tsync_errors\tpolicy_errors\tnever_transmitted\tdelivery_faulted\tcrashed_before_merge\tpending_at_censor\tunattributed\tenvelope_accounted\tmissing_accounted\tfully_accounted\tresult_signature"
+            "profile\ttopology\tseed\tfault\tsim_success\tdist_success\tcollector_initial\tcollector_final\tmax_local_round\tactions\tlogical_messages\ttransport_attempts\tdelivered\tpartitioned\tcrashed\tpending\tattempted_communication_units\tcommunication_units\tuseful\tduplicate\tduplicate_envelopes\tp2panda_local_ops\tp2panda_remote_ops\tsync_sessions\tsync_errors\tpolicy_errors\tnever_transmitted\tdelivery_faulted\tcrashed_before_merge\tpending_at_censor\tunattributed\tenvelope_accounted\tmissing_accounted\tcommunication_accounted\tfully_accounted\tresult_signature"
         );
     }
 
     println!(
-        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:016x}",
+        "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:016x}",
         config.profile,
         config.topology.name(),
         config.seed,
@@ -616,6 +660,7 @@ async fn main() -> Result<()> {
         counts.partitioned,
         counts.crashed,
         counts.pending,
+        attempted_communication_units,
         aggregate.communication_units,
         aggregate.useful_deliveries,
         aggregate.duplicate_deliveries,
@@ -632,6 +677,7 @@ async fn main() -> Result<()> {
         missing.unattributed,
         yes_no(counts.accounted()),
         yes_no(missing_accounted),
+        yes_no(communication_accounted),
         yes_no(fully_accounted),
         signature,
     );
@@ -737,7 +783,7 @@ async fn run_node(
 
                 state.round += 1;
                 stats.rounds = state.round;
-                apply_restart_if_needed(node_index, &config, &mut state)?;
+                apply_restart_if_needed(node_index, &config, &mut state, &ledger)?;
 
                 if is_crashed(&config, node_index, state.round) {
                     continue;
@@ -851,8 +897,6 @@ async fn run_node(
 
                 stats.actions += 1;
                 stats.logical_messages += recipients.len() as u64;
-                stats.communication_units +=
-                    facts.len() as u64 * recipients.len() as u64;
             }
             event = rx.next() => {
                 let event = event.context("topic stream closed before run completed")?;
@@ -974,6 +1018,7 @@ fn apply_envelope(
         .expect("F1b ledger poisoned")
         .close(attempt_key, &envelope.facts, Terminal::Delivered);
 
+    stats.communication_units += envelope.facts.len() as u64;
     for fact in &envelope.facts {
         if has_fact(&state.knowledge, *fact) {
             stats.duplicate_deliveries += 1;
@@ -990,6 +1035,7 @@ fn apply_restart_if_needed(
     node_index: u16,
     config: &Config,
     state: &mut LocalState,
+    ledger: &Arc<Mutex<Ledger>>,
 ) -> Result<()> {
     if state.restart_applied
         || node_index != config.crash_node
@@ -1001,7 +1047,14 @@ fn apply_restart_if_needed(
     }
 
     if config.fault == FaultKind::CrashReset {
+        let before = state.knowledge.clone();
         init_state(config, node_index, &mut state.knowledge)?;
+        if node_index == 0 {
+            ledger
+                .lock()
+                .expect("F1b ledger poisoned")
+                .mark_collector_erasure(&before, &state.knowledge, config.facts);
+        }
     }
     state.sent.fill(0);
     state.cursor = 0;
@@ -1276,7 +1329,9 @@ fn result_signature(
     collector: &NodeStats,
     aggregate: &AggregateStats,
     counts: LedgerCounts,
+    attempted_communication_units: u64,
     missing: MissingCounts,
+    communication_accounted: bool,
     fully_accounted: bool,
 ) -> u64 {
     let mut hash = 0xcbf29ce484222325_u64;
@@ -1295,6 +1350,7 @@ fn result_signature(
         counts.partitioned,
         counts.crashed,
         counts.pending,
+        attempted_communication_units,
         aggregate.communication_units,
         aggregate.useful_deliveries,
         aggregate.duplicate_deliveries,
@@ -1309,6 +1365,7 @@ fn result_signature(
         missing.crashed_before_merge as u64,
         missing.pending_at_censor as u64,
         missing.unattributed as u64,
+        communication_accounted as u64,
         fully_accounted as u64,
     ];
     for value in values {
@@ -1318,6 +1375,16 @@ fn result_signature(
         }
     }
     hash
+}
+
+fn validation_network_id(config: &Config) -> [u8; 32] {
+    let base = run_nonce(config) ^ 0x4631425f4e455449;
+    let mut result = [0_u8; 32];
+    for index in 0..4 {
+        let word = mix64(base ^ ((index as u64 + 1) * 0x9e3779b97f4a7c15));
+        result[index * 8..(index + 1) * 8].copy_from_slice(&word.to_le_bytes());
+    }
+    result
 }
 
 fn yes_no(value: bool) -> &'static str {
