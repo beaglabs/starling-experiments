@@ -321,7 +321,7 @@ pub fn run(config: Config, theta: stage7a.Theta) Error!Result {
         }
     }
 
-    var min_decisions = std.math.maxInt(u32);
+    var min_decisions: u32 = std.math.maxInt(u32);
     var max_decisions: u32 = 0;
     node = 0;
     while (node < config.world.population_size) : (node += 1) {
