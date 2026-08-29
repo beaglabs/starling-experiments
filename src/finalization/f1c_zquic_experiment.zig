@@ -368,7 +368,8 @@ const Engine = struct {
             .facts = action.facts,
         });
         self.result.transport_attempts +%= 1;
-        self.result.attempted_communication_units +%= action.selected;
+        self.result.attempted_communication_units +%=
+            @as(u64, action.selected);
         if (recipient == scaling.collector_index) {
             markFactCounts(
                 action.facts,
@@ -459,9 +460,10 @@ const Engine = struct {
         const useful: u64 = @intCast(after - before);
 
         self.closeAttempt(index, .delivered);
-        self.result.communication_units +%= envelope.selected;
+        const selected: u64 = envelope.selected;
+        self.result.communication_units +%= selected;
         self.result.useful +%= useful;
-        self.result.duplicate +%= envelope.selected - useful;
+        self.result.duplicate +%= selected - useful;
     }
 
     fn findAttempt(
