@@ -31,16 +31,23 @@ pub fn encode(
     envelope: Envelope,
     fact_count: usize,
 ) Error![]const u8 {
-    if (envelope.selected == 0 or envelope.selected > fact_count) {
+    if (envelope.selected == 0 or
+        @as(usize, envelope.selected) > fact_count)
+    {
         return error.InvalidFrame;
     }
-    if (envelope.facts.count(fact_count) != envelope.selected) {
+    if (envelope.facts.count(fact_count) !=
+        @as(usize, envelope.selected))
+    {
         return error.InvalidFrame;
     }
 
     const body_len: usize = 12 + @as(usize, envelope.selected) * 2;
     var prefix_scratch: [8]u8 = undefined;
-    const prefix = zquic.varint.encode(&prefix_scratch, body_len) catch {
+    const prefix = zquic.varint.encode(
+        &prefix_scratch,
+        @intCast(body_len),
+    ) catch {
         return error.InvalidFrame;
     };
     const total_len = prefix.len + body_len;
@@ -74,14 +81,18 @@ pub fn encode(
 }
 
 pub fn parse(buf: []const u8, fact_count: usize) Error!?Parsed {
-    const prefix = decodeQuicVarint(buf) orelse return null;
+    const prefix = zquic.varint.decode(buf) catch |err| switch (err) {
+        error.BufferTooShort => return null,
+        else => return error.InvalidFrame,
+    };
     if (prefix.value > max_frame_bytes) return error.InvalidFrame;
     const body_len: usize = @intCast(prefix.value);
-    const total_len = prefix.len + body_len;
+    const prefix_len: usize = @intCast(prefix.len);
+    const total_len = prefix_len + body_len;
     if (buf.len < total_len) return null;
     if (body_len < 12) return error.InvalidFrame;
 
-    const body = buf[prefix.len..total_len];
+    const body = buf[prefix_len..total_len];
     if (body[0] != magic) return error.InvalidFrame;
     if (body[1] != version) return error.InvalidVersion;
 
@@ -90,7 +101,10 @@ pub fn parse(buf: []const u8, fact_count: usize) Error!?Parsed {
     const sequence = getU32(body[6..10]);
     const selected = getU16(body[10..12]);
     const expected_len = 12 + @as(usize, selected) * 2;
-    if (selected == 0 or selected > fact_count or expected_len != body.len) {
+    if (selected == 0 or
+        @as(usize, selected) > fact_count or
+        expected_len != body.len)
+    {
         return error.InvalidFrame;
     }
 
@@ -98,10 +112,12 @@ pub fn parse(buf: []const u8, fact_count: usize) Error!?Parsed {
     var i: usize = 12;
     while (i < body.len) : (i += 2) {
         const fact = getU16(body[i .. i + 2]);
-        if (fact >= fact_count) return error.FactOutOfRange;
+        if (@as(usize, fact) >= fact_count) return error.FactOutOfRange;
         facts.set(fact);
     }
-    if (facts.count(fact_count) != selected) return error.InvalidFrame;
+    if (facts.count(fact_count) != @as(usize, selected)) {
+        return error.InvalidFrame;
+    }
 
     return .{
         .envelope = .{
@@ -113,25 +129,6 @@ pub fn parse(buf: []const u8, fact_count: usize) Error!?Parsed {
         },
         .total_len = total_len,
     };
-}
-
-const DecodedVarint = struct {
-    value: u64,
-    len: usize,
-};
-
-fn decodeQuicVarint(buf: []const u8) ?DecodedVarint {
-    if (buf.len == 0) return null;
-    const tag = buf[0] >> 6;
-    const len: usize = @as(usize, 1) << @intCast(tag);
-    if (buf.len < len) return null;
-
-    var value: u64 = buf[0] & 0x3f;
-    var i: usize = 1;
-    while (i < len) : (i += 1) {
-        value = (value << 8) | buf[i];
-    }
-    return .{ .value = value, .len = len };
 }
 
 fn putU16(out: []u8, value: u16) void {
