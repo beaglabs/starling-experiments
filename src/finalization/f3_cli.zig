@@ -301,8 +301,9 @@ fn writeHeader(io: std.Io, out: std.Io.File) !void {
         io,
         "phase\tsplit\tid\tsource\tlabel\tn\te\tr\tu\tc\truns\t" ++
             "failures\trounds_sum\tcommunication_sum\tduplicate_sum\t" ++
-            "computation_sum\tinference_sum\tuseful_sum\tuseful_per_1000\t" ++
-            "duplicate_permille\tviolations\tselected_frontier\n",
+            "computation_sum\tinference_sum\tcache_reuse_sum\t" ++
+            "useful_sum\tuseful_per_1000\tduplicate_permille\tviolations\t" ++
+            "inference_accounted\tselected_frontier\n",
     );
 }
 
@@ -338,10 +339,12 @@ fn writeRow(
             metrics.duplicate_sum,
             metrics.computation_sum,
             metrics.inference_sum,
+            metrics.cache_reuse_sum,
             metrics.useful_sum,
             metrics.usefulPerThousand(),
             metrics.duplicatePermille(),
             metrics.violations,
+            yesNo(metrics.inferenceAccounted()),
             yesNo(selected),
         },
     );
