@@ -254,6 +254,8 @@ def main() -> int:
         "candidate_count: 134",
         "expected_candidate_count: 134",
         "corner_candidate_count: 134",
+        "gated_candidates: 127",
+        "expected_gated_candidates: 127",
         "invalid_theta: 0",
         "duplicate_theta: 0",
         "training_worlds: 48",
