@@ -91,13 +91,12 @@ fn writeHeader(io: std.Io) !void {
 
 fn writeResult(io: std.Io, result: f1c.Result) !void {
     const missing = result.fact_count - result.collector_final;
-    var buffer: [8192]u8 = undefined;
-    const line = try std.fmt.bufPrint(
-        &buffer,
+    var prefix_buffer: [6144]u8 = undefined;
+    const prefix = try std.fmt.bufPrint(
+        &prefix_buffer,
         "{s}\t{s}\t{d}\t{s}\t{s}\t{d}\t{d}\t{d}\t{d}\t{d}\t" ++
             "{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t" ++
-            "{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t" ++
-            "{d}\t{d}\t{d}\t{x}\t{s}\t{s}\t{s}\t{s}\t{x}\n",
+            "{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t{d}\t",
         .{
             result.profile,
             result.topology.name(),
@@ -127,6 +126,14 @@ fn writeResult(io: std.Io, result: f1c.Result) !void {
             result.crashed_before_merge,
             result.pending_at_censor,
             result.unattributed,
+        },
+    );
+
+    var suffix_buffer: [2048]u8 = undefined;
+    const suffix = try std.fmt.bufPrint(
+        &suffix_buffer,
+        "{d}\t{d}\t{d}\t{d}\t{d}\t{x}\t{s}\t{s}\t{s}\t{s}\t{x}\n",
+        .{
             result.udp_datagrams,
             result.network_polls,
             result.backpressure_events,
@@ -140,7 +147,9 @@ fn writeResult(io: std.Io, result: f1c.Result) !void {
             result.result_signature,
         },
     );
-    try std.Io.File.stdout().writeStreamingAll(io, line);
+
+    try std.Io.File.stdout().writeStreamingAll(io, prefix);
+    try std.Io.File.stdout().writeStreamingAll(io, suffix);
 }
 
 fn yesNo(value: bool) []const u8 {
