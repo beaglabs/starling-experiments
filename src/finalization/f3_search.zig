@@ -77,6 +77,7 @@ pub const Aggregate = struct {
     duplicate_sum: u64 = 0,
     computation_sum: u64 = 0,
     inference_sum: u64 = 0,
+    cache_reuse_sum: u64 = 0,
     useful_sum: u64 = 0,
     violations: u64 = 0,
 
@@ -92,6 +93,7 @@ pub const Aggregate = struct {
         self.duplicate_sum +%= result.duplicate_deliveries;
         self.computation_sum +%= result.policy_calls;
         self.inference_sum +%= result.inference_units;
+        self.cache_reuse_sum +%= result.cache_reuses;
         self.useful_sum +%= result.useful_deliveries;
         self.violations +%= result.violations;
     }
@@ -173,6 +175,7 @@ pub fn cornerMatchesReference(
         actual.duplicate_sum == expected.duplicate_sum and
         actual.computation_sum == expected.computation_sum and
         actual.inference_sum == expected.computation_sum and
+        actual.cache_reuse_sum == 0 and
         actual.useful_sum == expected.useful_sum and
         actual.violations == expected.violations;
 }
@@ -736,4 +739,22 @@ test "F3 c=1000 corner candidate set exactly matches Stage 7B" {
             actual.items[i].theta.inference_gating_permille,
         );
     }
+}
+
+
+test "F3 aggregate inference accounting is exact" {
+    const candidate = Candidate{
+        .id = 0,
+        .source = .fixed_profile,
+        .label = "accounting_probe",
+        .theta = .{
+            .base = stage7a.soft_novel_theta,
+            .inference_gating_permille = 500,
+        },
+    };
+    const aggregate = try evaluateCandidate(candidate, .validation);
+    try std.testing.expectEqual(
+        aggregate.computation_sum,
+        aggregate.inference_sum + aggregate.cache_reuse_sum,
+    );
 }
