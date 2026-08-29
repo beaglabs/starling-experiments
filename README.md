@@ -25,8 +25,8 @@ without semantic changes. Their source is the parent of `176a0f9`:
 e943ea84a71bbf0189a54d0a703052b1515629cf
 ```
 
-The protocol core is consumed as a Zig 0.16.0 path dependency materialized by
-the verifier through Git SSH and pinned to:
+The protocol core is consumed directly as a public immutable HTTPS archive
+pinned to:
 
 ```text
 beaglabs/starlings
@@ -34,8 +34,8 @@ beaglabs/starlings
 starlings-0.1.0-3sAXWncEAgDdDV5wfBEssJhtUpW2Spm-u8gDHJOFPaKE
 ```
 
-The managed checkout lives under ignored `.deps/starlings`; the verifier
-fetches the exact commit and checks `HEAD` before invoking Zig.
+The archive URL embeds the exact commit SHA and Zig verifies the frozen package
+content hash before building.
 
 Run the complete fail-closed S0 gate:
 
