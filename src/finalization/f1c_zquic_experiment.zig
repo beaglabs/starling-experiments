@@ -165,6 +165,7 @@ const Engine = struct {
         [_]u32{0} ** scaling.max_operators,
     sequence: [scaling.max_operators]u32 =
         [_]u32{0} ** scaling.max_operators,
+    current_tick: u32 = 0,
     attempts: std.ArrayList(Attempt) = .empty,
     fact_ledger: FactLedger = .{},
     result: Result,
@@ -214,6 +215,7 @@ const Engine = struct {
         runtime: *runtime_mod.Runtime,
         tick: u32,
     ) !void {
+        self.current_tick = tick;
         if (self.config.fault == .crash_reset and
             tick == self.config.crash_end)
         {
@@ -393,23 +395,19 @@ const Engine = struct {
             .delivered => self.result.delivered +%= 1,
             .partitioned => {
                 self.result.partitioned +%= 1;
-                if (attempt.recipient == scaling.collector_index) {
-                    markFactCounts(
-                        attempt.facts,
-                        self.config.world.fact_count,
-                        &self.fact_ledger.delivery_faulted,
-                    );
-                }
+                markFactCounts(
+                    attempt.facts,
+                    self.config.world.fact_count,
+                    &self.fact_ledger.delivery_faulted,
+                );
             },
             .crashed => {
                 self.result.crashed +%= 1;
-                if (attempt.recipient == scaling.collector_index) {
-                    markFactCounts(
-                        attempt.facts,
-                        self.config.world.fact_count,
-                        &self.fact_ledger.crashed,
-                    );
-                }
+                markFactCounts(
+                    attempt.facts,
+                    self.config.world.fact_count,
+                    &self.fact_ledger.crashed,
+                );
             },
             .pending => {},
         }
@@ -438,7 +436,16 @@ const Engine = struct {
             return error.TransportPayloadMismatch;
         }
 
+        const sender: usize = @intCast(envelope.sender);
         const recipient: usize = @intCast(envelope.recipient);
+        if (self.isPartitioned(sender, recipient, self.current_tick)) {
+            self.closeAttempt(index, .partitioned);
+            return;
+        }
+        if (self.isCrashed(recipient, self.current_tick)) {
+            self.closeAttempt(index, .crashed);
+            return;
+        }
         const before = self.states[recipient].knowledge.count(
             self.config.world.fact_count,
         );
