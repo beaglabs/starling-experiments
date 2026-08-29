@@ -305,7 +305,7 @@ fn scalingSweep(io: std.Io) !void {
 }
 
 fn signedDelta(a: u64, b: u64) i128 {
-    return @as(i128, a) - @as(i128, b);
+    return @as(i128, @intCast(a)) - @as(i128, @intCast(b));
 }
 
 fn yesNo(value: bool) []const u8 {
