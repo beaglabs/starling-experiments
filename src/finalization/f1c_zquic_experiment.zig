@@ -32,17 +32,20 @@ pub const FaultKind = enum {
 pub const Config = struct {
     world: stage7a.Config,
     fault: FaultKind = .no_fault,
+    schedule_seed: u64 = 0,
     max_ticks: u32 = 4096,
+    clock_jitter: u16 = 3,
     partition_start: u32 = 8,
     partition_end: u32 = 48,
     partition_cut: usize = 4,
-    crash_node: usize = 3,
+    crash_node: usize = scaling.collector_index,
     crash_start: u32 = 8,
     crash_end: u32 = 40,
 
     pub fn validate(self: Config) !void {
         try self.world.validate();
         if (self.max_ticks == 0) return error.InvalidTickHorizon;
+        if (self.clock_jitter == 0) return error.InvalidClockJitter;
         if (self.partition_start >= self.partition_end or
             self.partition_cut == 0 or
             self.partition_cut >= self.world.population_size)
@@ -120,6 +123,7 @@ pub const Result = struct {
     backpressure_events: u64 = 0,
     send_failures: u64 = 0,
     malformed_frames: u64 = 0,
+    schedule_hash: u64 = 0,
     result_signature: u64 = 0,
 
     pub fn accounted(self: Result) bool {
@@ -163,6 +167,10 @@ const Engine = struct {
         [_]scaling.State{.{}} ** scaling.max_operators,
     local_round: [scaling.max_operators]u32 =
         [_]u32{0} ** scaling.max_operators,
+    next_tick: [scaling.max_operators]u32 =
+        [_]u32{0} ** scaling.max_operators,
+    periods: [scaling.max_operators]u16 =
+        [_]u16{0} ** scaling.max_operators,
     sequence: [scaling.max_operators]u32 =
         [_]u32{0} ** scaling.max_operators,
     current_tick: u32 = 0,
@@ -189,8 +197,26 @@ const Engine = struct {
                 .seed = config.world.seed,
                 .fault = config.fault,
                 .fact_count = config.world.fact_count,
+                .schedule_hash =
+                    mix64(config.schedule_seed ^ 0x5343484544554c45),
             },
         };
+
+        var clock_node: usize = 0;
+        while (clock_node < config.world.population_size) : (clock_node += 1) {
+            const clock_key = keyed(
+                config.schedule_seed,
+                clock_node,
+                0,
+                0x434c4f434b,
+            );
+            self.periods[clock_node] = @intCast(
+                1 + clock_key % @as(u64, config.clock_jitter),
+            );
+            self.next_tick[clock_node] = @intCast(
+                1 + mix64(clock_key) % @as(u64, self.periods[clock_node]),
+            );
+        }
         scaling.initializeStates(
             &self.states,
             config.world.asScaling(.round_robin),
@@ -237,6 +263,8 @@ const Engine = struct {
 
         var node: usize = 0;
         while (node < self.config.world.population_size) : (node += 1) {
+            if (self.next_tick[node] != tick) continue;
+            self.next_tick[node] +%= self.periods[node];
             if (self.isCrashed(node, tick)) continue;
 
             self.local_round[node] +%= 1;
@@ -322,6 +350,7 @@ const Engine = struct {
                 recipient,
                 sequence,
                 action,
+                tick,
             );
 
             if (self.isPartitioned(sender, recipient, tick)) {
@@ -358,6 +387,7 @@ const Engine = struct {
         recipient: usize,
         sequence: u32,
         action: scaling.Action,
+        tick: u32,
     ) !usize {
         const index = self.attempts.items.len;
         try self.attempts.append(self.allocator, .{
@@ -370,6 +400,18 @@ const Engine = struct {
         self.result.transport_attempts +%= 1;
         self.result.attempted_communication_units +%=
             @as(u64, action.selected);
+        const schedule_key = keyed(
+            self.config.schedule_seed,
+            sender,
+            recipient,
+            sequence,
+        );
+        self.result.schedule_hash = fold(
+            self.result.schedule_hash,
+            schedule_key,
+            tick,
+            self.result.transport_attempts,
+        );
         if (recipient == scaling.collector_index) {
             markFactCounts(
                 action.facts,
@@ -637,6 +679,8 @@ pub fn canonicalConfig(
             .max_rounds = 4096,
         },
         .fault = fault,
+        .schedule_seed = seed,
+        .clock_jitter = 3,
     };
 }
 
@@ -702,6 +746,33 @@ fn isTopologyEdge(
     };
 }
 
+fn keyed(seed: u64, a: usize, b: usize, c: anytype) u64 {
+    return mix64(
+        seed ^
+        (@as(u64, @intCast(a)) *% 0x9e3779b97f4a7c15) ^
+        (@as(u64, @intCast(b)) *% 0xbf58476d1ce4e5b9) ^
+        (@as(u64, @intCast(c)) *% 0x94d049bb133111eb),
+    );
+}
+
+fn fold(hash: u64, a: u64, b: anytype, c: anytype) u64 {
+    return mix64(
+        hash ^ a ^
+        (@as(u64, @intCast(b)) *% 0x9e3779b97f4a7c15) ^
+        (@as(u64, @intCast(c)) *% 0xbf58476d1ce4e5b9),
+    );
+}
+
+fn mix64(value: u64) u64 {
+    var x = value;
+    x ^= x >> 30;
+    x *%= 0xbf58476d1ce4e5b9;
+    x ^= x >> 27;
+    x *%= 0x94d049bb133111eb;
+    x ^= x >> 31;
+    return x;
+}
+
 fn resultSignature(result: Result) u64 {
     var hash: u64 = 0xcbf29ce484222325;
     const values = [_]u64{
@@ -734,6 +805,7 @@ fn resultSignature(result: Result) u64 {
         result.backpressure_events,
         result.send_failures,
         result.malformed_frames,
+        result.schedule_hash,
     };
     for (values) |value| {
         var shift: usize = 0;
