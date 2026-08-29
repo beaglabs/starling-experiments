@@ -77,6 +77,12 @@ fn validate(io: std.Io) !void {
     );
     try writeLine(io, out, "corner_candidate_count: {d}\n", .{corner_candidates.len});
     try writeLine(io, out, "gated_candidates: {d}\n", .{gated});
+    try writeLine(
+        io,
+        out,
+        "expected_gated_candidates: {d}\n",
+        .{search.latin_candidate_count - 1},
+    );
     try writeLine(io, out, "invalid_theta: {d}\n", .{invalid});
     try writeLine(io, out, "duplicate_theta: {d}\n", .{duplicates});
     try writeLine(
@@ -94,7 +100,8 @@ fn validate(io: std.Io) !void {
 
     if (candidates.len != search.canonical_candidate_count or
         corner_candidates.len != search.canonical_candidate_count or
-        invalid != 0 or duplicates != 0 or gated == 0)
+        invalid != 0 or duplicates != 0 or
+        gated != search.latin_candidate_count - 1)
     {
         std.process.exit(1);
     }
