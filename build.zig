@@ -61,6 +61,15 @@ pub fn build(b: *std.Build) void {
     });
     const run_f2_1_tests = b.addRunArtifact(f2_1_tests);
 
+    const f2_2_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/f2_2_test_root.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_f2_2_tests = b.addRunArtifact(f2_2_tests);
+
     const test_step = b.step(
         "test",
         "Run protocol-core, frozen-substrate, and finalization tests",
@@ -70,6 +79,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_f1a_tests.step);
     test_step.dependOn(&run_f1c_tests.step);
     test_step.dependOn(&run_f2_1_tests.step);
+    test_step.dependOn(&run_f2_2_tests.step);
 
     addRunStep(b, target, optimize, "run-stage5a", "Run frozen Stage 5A CLI", "src/substrate/stage5a_run.zig");
     addRunStep(b, target, optimize, "run-stage7a", "Run frozen Stage 7A CLI", "src/substrate/stage7a_run.zig");
@@ -110,6 +120,24 @@ pub fn build(b: *std.Build) void {
         "Run F2.1 synchronous/asynchronous gap experiment",
     );
     f2_1_step.dependOn(&f2_1_run.step);
+
+    const f2_2_module = b.createModule(.{
+        .root_source_file = b.path("src/f2_2_run.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    const f2_2_exe = b.addExecutable(.{
+        .name = "run-f2-2",
+        .root_module = f2_2_module,
+    });
+    b.installArtifact(f2_2_exe);
+    const f2_2_run = b.addRunArtifact(f2_2_exe);
+    if (b.args) |args| f2_2_run.addArgs(args);
+    const f2_2_step = b.step(
+        "run-f2-2",
+        "Run F2.2 asynchronous scaling experiment",
+    );
+    f2_2_step.dependOn(&f2_2_run.step);
 }
 
 fn addRunStep(
