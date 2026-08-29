@@ -27,9 +27,9 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_core_tests.step);
     test_step.dependOn(&run_substrate_tests.step);
 
-    addRunStep(b, target, optimize, "run-stage5a", "Run frozen Stage 5A CLI", "src/cli/stage5a.zig");
-    addRunStep(b, target, optimize, "run-stage7a", "Run frozen Stage 7A CLI", "src/cli/stage7a.zig");
-    addRunStep(b, target, optimize, "run-stage7c", "Run frozen Stage 7C CLI", "src/cli/stage7c.zig");
+    addRunStep(b, target, optimize, "run-stage5a", "Run frozen Stage 5A CLI", "src/substrate/stage5a_run.zig");
+    addRunStep(b, target, optimize, "run-stage7a", "Run frozen Stage 7A CLI", "src/substrate/stage7a_run.zig");
+    addRunStep(b, target, optimize, "run-stage7c", "Run frozen Stage 7C CLI", "src/substrate/stage7c_run.zig");
 }
 
 fn addRunStep(
