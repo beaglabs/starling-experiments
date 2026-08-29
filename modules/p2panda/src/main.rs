@@ -1431,3 +1431,113 @@ fn mix64(value: u64) -> u64 {
     x ^= x >> 31;
     x
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn envelope(facts: Vec<u16>) -> Envelope {
+        Envelope {
+            run_nonce: 7,
+            sender: 1,
+            sequence: 1,
+            logical_round: 10,
+            recipients: vec![0],
+            facts,
+        }
+    }
+
+    #[test]
+    fn ledger_attempt_identity_is_exact() {
+        let envelope = envelope(vec![0, 1]);
+        let mut ledger = Ledger::new(4);
+        ledger.record_attempt(&envelope, 0);
+
+        let before = ledger.counts();
+        assert_eq!(before.attempts, 1);
+        assert_eq!(before.pending, 1);
+        assert!(before.accounted());
+
+        ledger.close((1, 1, 0), &envelope.facts, Terminal::Delivered);
+        let after = ledger.counts();
+        assert_eq!(after.attempts, 1);
+        assert_eq!(after.delivered, 1);
+        assert_eq!(after.pending, 0);
+        assert_eq!(after.interface_violations, 0);
+        assert!(after.accounted());
+        assert_eq!(ledger.attempted_communication_units(), 2);
+    }
+
+    #[test]
+    fn delivered_then_missing_is_not_silently_called_crash() {
+        let envelope = envelope(vec![0]);
+        let mut ledger = Ledger::new(2);
+        ledger.record_attempt(&envelope, 0);
+        ledger.close((1, 1, 0), &envelope.facts, Terminal::Delivered);
+
+        let collector = vec![0_u64; 1];
+        let missing = ledger.classify_missing(&collector, 1);
+        assert_eq!(missing.unattributed, 1);
+        assert_eq!(missing.crashed_before_merge, 0);
+    }
+
+    #[test]
+    fn proven_collector_erasure_is_crash_attributed() {
+        let envelope = envelope(vec![0]);
+        let mut ledger = Ledger::new(2);
+        ledger.record_attempt(&envelope, 0);
+        ledger.close((1, 1, 0), &envelope.facts, Terminal::Delivered);
+
+        let before = vec![1_u64];
+        let after = vec![0_u64];
+        ledger.mark_collector_erasure(&before, &after, 1);
+
+        let missing = ledger.classify_missing(&after, 1);
+        assert_eq!(missing.crashed_before_merge, 1);
+        assert_eq!(missing.unattributed, 0);
+    }
+
+    #[test]
+    fn unpaired_receive_is_an_interface_violation() {
+        let mut ledger = Ledger::new(2);
+        ledger.close((1, 9, 0), &[0], Terminal::Delivered);
+        let counts = ledger.counts();
+        assert_eq!(counts.interface_violations, 1);
+        assert_eq!(counts.attempts, 0);
+        assert!(counts.accounted());
+    }
+
+    #[test]
+    fn fault_windows_are_deterministic() {
+        let mut partition = Config::default();
+        partition.fault = FaultKind::Partition;
+        assert!(!is_partitioned(&partition, 1, 6, 7));
+        assert!(is_partitioned(&partition, 1, 6, 8));
+        assert!(!is_partitioned(&partition, 1, 6, 48));
+        assert!(!is_partitioned(&partition, 1, 2, 12));
+
+        let mut crash = Config::default();
+        crash.fault = FaultKind::CrashPersist;
+        assert!(!is_crashed(&crash, crash.crash_node, 7));
+        assert!(is_crashed(&crash, crash.crash_node, 8));
+        assert!(!is_crashed(&crash, crash.crash_node, 40));
+        assert!(!is_crashed(&crash, crash.crash_node + 1, 12));
+    }
+
+    #[test]
+    fn validation_network_id_is_stable_and_fault_scoped() {
+        let baseline = Config::default();
+        assert_eq!(
+            validation_network_id(&baseline),
+            validation_network_id(&baseline),
+        );
+
+        let mut partition = baseline.clone();
+        partition.fault = FaultKind::Partition;
+        assert_ne!(
+            validation_network_id(&baseline),
+            validation_network_id(&partition),
+        );
+    }
+}
