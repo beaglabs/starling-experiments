@@ -382,7 +382,7 @@ pub fn run(config: Config, theta: stage7a.Theta) Error!Result {
 
             var observation_state = states[node];
             if (config.stale_view_ticks != 0) {
-                if (tick - last_view_refresh[node] >= config.stale_view_ticks) {
+                if (tick - last_view_refresh[node] >= @as(u32, config.stale_view_ticks)) {
                     observed_knowledge[node] = states[node].knowledge;
                     last_view_refresh[node] = tick;
                 } else if (!scaling.BitSet.eql(
@@ -593,7 +593,7 @@ fn scheduleCopy(
         @as(u32, config.latency_min) +
         @as(u32, @intCast(jitter));
     if (config.force_reordering and (ordinal & 1) == 1) {
-        due_tick +%= config.reorder_delay;
+        due_tick +%= @as(u32, config.reorder_delay);
         result.forced_reorder_schedules +%= 1;
         result.schedule_hash = fold(
             result.schedule_hash,
