@@ -1,6 +1,7 @@
 const std = @import("std");
 const f3 = @import("f3_inference_policy.zig");
 const search = @import("f3_search.zig");
+const stage7b_anchor = @import("f3_stage7b_anchor.zig");
 const stage7a = @import("../substrate/stage7/stage7a_policy.zig");
 const stage7c = @import("../substrate/stage7/stage7c_async_transfer.zig");
 
@@ -55,6 +56,18 @@ fn validate(io: std.Io) !void {
 
     const out = std.Io.File.stdout();
     try writeLine(io, out, "F3 validation\n", .{});
+    try writeLine(
+        io,
+        out,
+        "stage7b_historical_blob: {s}\n",
+        .{stage7b_anchor.historical_search_blob},
+    );
+    try writeLine(
+        io,
+        out,
+        "stage7b_report_sha256: {s}\n",
+        .{stage7b_anchor.canonical_report_sha256},
+    );
     try writeLine(io, out, "candidate_count: {d}\n", .{candidates.len});
     try writeLine(
         io,
