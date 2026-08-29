@@ -107,6 +107,11 @@ pub const Aggregate = struct {
         if (self.communication_sum == 0) return 0;
         return (self.duplicate_sum * 1000) / self.communication_sum;
     }
+
+    pub fn inferenceAccounted(self: Aggregate) bool {
+        return self.computation_sum ==
+            self.inference_sum + self.cache_reuse_sum;
+    }
 };
 
 pub const Frontier = struct {
