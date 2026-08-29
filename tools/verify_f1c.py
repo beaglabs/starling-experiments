@@ -35,14 +35,24 @@ def run(
     timeout_s: int | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
     print("+", " ".join(args), file=sys.stderr)
-    return subprocess.run(
+    proc = subprocess.run(
         args,
         cwd=ROOT,
-        check=True,
+        check=False,
         stdout=subprocess.PIPE if capture else None,
         stderr=subprocess.PIPE if capture else None,
         timeout=timeout_s,
     )
+    if proc.returncode != 0:
+        if capture:
+            stderr = proc.stderr.decode(errors="replace")
+            if stderr:
+                print(stderr, end="" if stderr.endswith("\n") else "\n", file=sys.stderr)
+        raise SystemExit(
+            f"F1c engineering gate failed: {' '.join(args)} "
+            f"exit={proc.returncode}"
+        )
+    return proc
 
 
 def verify_dependency_pin() -> None:
