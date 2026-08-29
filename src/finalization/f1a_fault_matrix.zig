@@ -592,7 +592,7 @@ fn scheduleCopy(
         tick +
         @as(u32, config.latency_min) +
         @as(u32, @intCast(jitter));
-    if (config.force_reordering and (ordinal & 1) == 1) {
+    if (config.force_reordering and (sequence & 1) == 1) {
         due_tick +%= @as(u32, config.reorder_delay);
         result.forced_reorder_schedules +%= 1;
         result.schedule_hash = fold(
