@@ -1,0 +1,31 @@
+name: F1c engineering gate
+
+on:
+  push:
+    branches:
+      - feat/f1c-zquic-transport
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Zig 0.16.0
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Unit and substrate tests
+        run: zig build test
+
+      - name: Release build
+        run: zig build -Doptimize=ReleaseFast
+
+      - name: Real QUIC smoke world
+        run: ./zig-out/bin/run-f1c smoke
