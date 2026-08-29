@@ -727,9 +727,9 @@ fn resultSignature(result: Result) u64 {
         result.malformed_frames,
     };
     for (values) |value| {
-        var shift: u6 = 0;
+        var shift: usize = 0;
         while (shift < 64) : (shift += 8) {
-            hash ^= @as(u8, @truncate(value >> shift));
+            hash ^= @as(u8, @truncate(value >> @intCast(shift)));
             hash *%= 0x100000001b3;
         }
     }
