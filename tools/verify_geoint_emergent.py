@@ -12,6 +12,7 @@ from typing import Optional
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ADAPTER = ROOT / "tools" / "geoint_shadowfinder.py"
+PHOTO_CONTEXT = ROOT / "tools" / "geoint_photo_context.py"
 
 
 def run(
@@ -108,6 +109,28 @@ def structural_gate() -> None:
     )
 
 
+def inspect_photo_context(args: argparse.Namespace) -> dict:
+    command = [
+        sys.executable,
+        str(PHOTO_CONTEXT),
+        "--image",
+        str(args.photo),
+    ]
+    if args.datetime:
+        command.extend(["--datetime", args.datetime])
+    if args.sun_altitude_deg is not None:
+        command.extend(["--sun-altitude-deg", str(args.sun_altitude_deg)])
+    if args.object_height is not None:
+        command.extend(["--object-height", str(args.object_height)])
+    if args.shadow_length is not None:
+        command.extend(["--shadow-length", str(args.shadow_length)])
+
+    result = run(*command, capture=True, timeout_s=120)
+    payload = json.loads(result.stdout)
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return payload
+
+
 def live_shadowfinder(args: argparse.Namespace) -> None:
     command = [
         sys.executable,
@@ -170,6 +193,7 @@ def live_shadowfinder(args: argparse.Namespace) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--shadowfinder-live", action="store_true")
+    parser.add_argument("--photo", type=pathlib.Path)
     parser.add_argument("--shadowfinder-root", type=pathlib.Path)
     parser.add_argument("--timezone-grid", type=pathlib.Path)
     parser.add_argument("--datetime")
@@ -186,6 +210,9 @@ def main() -> int:
     args = parser.parse_args()
 
     structural_gate()
+
+    if args.photo:
+        inspect_photo_context(args)
 
     if args.shadowfinder_live:
         if not args.shadowfinder_root or not args.datetime:
