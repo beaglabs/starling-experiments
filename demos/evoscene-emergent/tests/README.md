@@ -112,3 +112,21 @@ D2e triangulation dependency (already present in the D2a venv):
 ~~~sh
 python -m pip install -r demos/evoscene-emergent/requirements-d2e.txt
 ~~~
+
+## D2f — learned novel-view evidence
+
+Local structural gate (no MetaView GPU required):
+
+~~~sh
+zig build test-demo-evoscene-d2f
+zig build -Doptimize=ReleaseFast run-demo-evoscene-d2f -- validate
+python tools/evoscene_metaview_generate.py --self-test
+python tools/evoscene_ingest_learned_view.py --self-test
+python tools/evoscene_finalize_multiview.py --self-test
+python tools/verify_evoscene_d2f.py
+~~~
+
+CUDA live gate:
+
+See `../D2F_LEARNED_NOVEL_VIEW.md` for the pinned external MetaView
+environment and full `verify_evoscene_d2f.py --live` invocation.

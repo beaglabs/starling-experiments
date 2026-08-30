@@ -400,12 +400,27 @@ D2b explicit backprojection + initial point-cloud scene state
 D2c real fusion + geometry refinement
 D2d deterministic novel-view rendering/reprojection (existing geometry only)
 D2e deterministic final mesh generation/export
-D2f optional learned novel-view generator (genuinely new image evidence)
+D2f learned novel-view generator (required for EvoScene-faithful unseen-region evidence)
 ~~~
 
 The mesh finalizer runs only after convergence/STOP and runs exactly once in
 both fixed and emergent arms. Mesh generation therefore remains a controlled
 post-convergence cost rather than another scheduling degree of freedom.
+
+The D2 letter suffixes record implementation work packages, not runtime order.
+When learned unseen-region generation is enabled, the real execution order is:
+
+~~~text
+D2a -> D2b -> D2c
+             |
+             +-> D2d deterministic prediction / coverage evidence
+             +-> D2f learned novel RGB / new geometry
+             +-> D2c fusion/refinement
+             +-> repeat while scheduler accepts more work
+             |
+             v
+            D2e finalization after STOP
+~~~
 
 Do not merge a tool merely because it runs. Each adapter needs:
 
@@ -732,5 +747,7 @@ D2d  deterministic novel-view render/reprojection
 D2e  deterministic post-convergence mesh finalization/export
 ~~~
 
-D2f remains optional. It may later add learned novel-view evidence but is not
-required to complete the deterministic operator substrate needed before D3.
+D2a-D2e remain the complete deterministic operator substrate. D2f is optional
+only when testing that substrate in isolation. For the full EvoScene-faithful
+fixed-vs-emergent experiment, D2f is required before D3 because it is the
+operator that can add genuinely unseen-region image evidence.
