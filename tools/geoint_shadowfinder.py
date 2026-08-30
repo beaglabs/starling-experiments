@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
-import importlib.metadata
 import json
 import math
 import pathlib
@@ -147,15 +146,11 @@ def summarize_candidates(
 
 
 def run_live(args: argparse.Namespace) -> dict[str, Any]:
-    version = importlib.metadata.version("ShadowFinder")
-    if version != SHADOWFINDER_VERSION:
-        raise RuntimeError(
-            f"ShadowFinder version mismatch: {version} != {SHADOWFINDER_VERSION}"
-        )
-
     root = pathlib.Path(args.shadowfinder_root).expanduser().resolve()
     verify_source(root)
 
+    source_root = root / "src"
+    sys.path.insert(0, str(source_root))
     from shadowfinder import ShadowFinder
 
     date_time = parse_datetime(args.datetime)
