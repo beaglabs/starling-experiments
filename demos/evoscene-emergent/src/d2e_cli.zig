@@ -19,10 +19,10 @@ pub fn main(init: std.process.Init) !void {
     hexDigest(digest, &digest_hex);
 
     const primitive_ok =
-        contract.exposedFaceCount(true, 0) == 6 and
-        contract.exposedFaceCount(true, 3) == 3 and
-        contract.exposedFaceCount(true, 6) == 0 and
-        contract.exposedFaceCount(false, 0) == 0;
+        contract.depthEdgeAccepted(2.0, 2.04) and
+        !contract.depthEdgeAccepted(2.0, 2.08) and
+        contract.depthEdgeAccepted(6.0, 6.10) and
+        !contract.depthEdgeAccepted(6.0, 6.25);
 
     const out = std.Io.File.stdout();
     try writeLine(io, out, "EvoScene-emergent D2e mesh-finalization contract\n", .{});
@@ -31,12 +31,26 @@ pub fn main(init: std.process.Init) !void {
     try writeLine(
         io,
         out,
-        "canonical_voxel_size_mm: {d}\n",
-        .{contract.canonical_voxel_size_mm},
+        "canonical_max_pixel_edge: {d}\n",
+        .{contract.canonical_max_pixel_edge},
     );
+    try writeLine(
+        io,
+        out,
+        "canonical_max_depth_jump_mm: {d}\n",
+        .{contract.canonical_max_depth_jump_mm},
+    );
+    try writeLine(
+        io,
+        out,
+        "canonical_relative_depth_jump_ppm: {d}\n",
+        .{contract.canonical_relative_depth_jump_ppm},
+    );
+    try writeLine(io, out, "scipy_version: {s}\n", .{contract.scipy_version});
     try writeLine(io, out, "surface_rule: {s}\n", .{contract.surface_rule});
-    try writeLine(io, out, "face_order: {s}\n", .{contract.face_order});
+    try writeLine(io, out, "raster_rule: {s}\n", .{contract.raster_rule});
     try writeLine(io, out, "triangle_rule: {s}\n", .{contract.triangle_rule});
+    try writeLine(io, out, "normal_rule: {s}\n", .{contract.normal_rule});
     try writeLine(
         io,
         out,
@@ -44,6 +58,12 @@ pub fn main(init: std.process.Init) !void {
         .{contract.coordinate_convention},
     );
     try writeLine(io, out, "vertex_rule: {s}\n", .{contract.vertex_rule});
+    try writeLine(
+        io,
+        out,
+        "canonical_ordering: {s}\n",
+        .{contract.canonical_ordering},
+    );
     try writeLine(io, out, "contract_blake3: {s}\n", .{&digest_hex});
     try writeLine(
         io,
@@ -60,7 +80,7 @@ pub fn main(init: std.process.Init) !void {
     try writeLine(
         io,
         out,
-        "D2e CONTRACT PASS: deterministic mesh-finalization boundary frozen\n",
+        "D2e CONTRACT PASS: deterministic projected-surface boundary frozen\n",
         .{},
     );
 }
