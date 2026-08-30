@@ -98,7 +98,7 @@ pub const fixed_steps = [_]FixedStep{
     },
 };
 
-pub const expected_trace_events: u64 = fixed_steps.len;
+pub const expected_trace_events: u64 = @intCast(fixed_steps.len);
 pub const expected_tool_invocations: u64 = 10;
 pub const expected_control_actions: u64 = 3;
 pub const expected_produced_artifacts: u64 = 12;
@@ -359,7 +359,7 @@ fn submitOutput(
 
 fn encodeU64Le(value: u64, out: *[8]u8) void {
     var i: usize = 0;
-    while (i < out.len) : (i += 1) {
+    while (i < 8) : (i += 1) {
         const shift: u6 = @intCast(i * 8);
         out[i] = @truncate(value >> shift);
     }
