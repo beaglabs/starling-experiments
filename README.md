@@ -140,7 +140,7 @@ The next research step is to make that abstraction explicit enough to support pr
 - robustness to missing or faulty operators,
 - and the conditions under which no individual agent needs to encode the final global workflow.
 
-The formal specification will be developed alongside the empirical traces in this repository rather than inferred from a toy system after the fact.
+The formal specification is now captured in [Formal Starlings Model v0.1](docs/FORMAL_MODEL.md) and is developed alongside the empirical traces in this repository rather than inferred from a toy system after the fact.
 
 ## Requirements
 
@@ -290,7 +290,7 @@ The protocol implementation and architecture decisions live in [`beaglabs/starli
 - [EvoScene plan](demos/evoscene-emergent/PLAN.md) — reconstruction workload and emergence experiment structure
 - [D3 emergent population](demos/evoscene-emergent/D3_EMERGENT_POPULATION.md) — decentralized workflow assembly and validation
 - [GEOINT emergence trial](demos/geoint-emergent/README.md) — typed evidence graph, epistemic closure, and conditional ShadowFinder activation
-- **Formal Starlings model** — next research artifact on this branch
+- [Formal Starlings model](docs/FORMAL_MODEL.md) — executable population semantics, emergence definition, invariants, empirical laws, and theorem candidates
 
 ## Scope
 
