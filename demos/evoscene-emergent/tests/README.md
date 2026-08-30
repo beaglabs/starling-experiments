@@ -55,3 +55,20 @@ Live against the validated D2a artifacts:
 ~~~sh
 python tools/verify_evoscene_d2b.py --live
 ~~~
+
+## D2c — deterministic fusion + geometry refinement
+
+Structural:
+
+~~~sh
+zig build test-demo-evoscene-d2c
+zig build -Doptimize=ReleaseFast run-demo-evoscene-d2c -- validate
+python tools/evoscene_fuse_refine.py --self-test
+python tools/verify_evoscene_d2c.py
+~~~
+
+Live against the two validated D2b outputs:
+
+~~~sh
+python tools/verify_evoscene_d2c.py --live
+~~~
