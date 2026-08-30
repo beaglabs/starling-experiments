@@ -133,6 +133,7 @@ pub const Runtime = struct {
         }
 
         if (self.terminated and !self.actionDone(.stop)) return false;
+        if (self.terminated and !self.facts.allResolved()) return false;
         if (self.actionDone(.stop) and !self.actionDone(.assess_uncertainty)) {
             return false;
         }
@@ -165,7 +166,8 @@ pub const Runtime = struct {
                 self.actionDone(.fuse_geolocation),
 
             .stop =>
-                self.actionDone(.assess_uncertainty),
+                self.actionDone(.assess_uncertainty) and
+                self.facts.allResolved(),
         };
     }
 
