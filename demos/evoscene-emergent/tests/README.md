@@ -90,7 +90,7 @@ Live closed-loop gate:
 python tools/verify_evoscene_d2d.py --live
 ~~~
 
-## D2e — deterministic final mesh generation / export
+## D2e — deterministic projected-surface mesh finalization
 
 Structural:
 
@@ -105,4 +105,10 @@ Live post-convergence finalizer:
 
 ~~~sh
 python tools/verify_evoscene_d2e.py --live
+~~~
+
+D2e triangulation dependency (already present in the D2a venv):
+
+~~~sh
+python -m pip install -r demos/evoscene-emergent/requirements-d2e.txt
 ~~~
