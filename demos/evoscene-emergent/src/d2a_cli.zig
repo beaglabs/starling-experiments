@@ -36,8 +36,8 @@ pub fn main(init: std.process.Init) !void {
     try writeLine(
         io,
         out,
-        "moge_v2_blob_sha1: {s}\n",
-        .{contract.moge_v2_blob_sha1},
+        "moge_source_identity: {s}\n",
+        .{contract.moge_source_identity},
     );
     try writeLine(io, out, "model_repo: {s}\n", .{contract.model_repo});
     try writeLine(io, out, "model_sha256: {s}\n", .{contract.model_sha256});
