@@ -6,7 +6,7 @@
 This document defines the current mathematical object studied by Starlings.
 
 It is intentionally stricter than a conceptual architecture description. Every
-core symbol is tied to an executable boundary in \`beaglabs/starlings\` or to a
+core symbol is tied to an executable boundary in `beaglabs/starlings` or to a
 validated experiment in this repository.
 
 The goal is to support three things:
@@ -36,15 +36,15 @@ with:
 
 | Symbol | Meaning | Executable boundary |
 | --- | --- | --- |
-| \(A\) | finite population of operators | \`Population\`, \`OperatorId\` |
-| \(G\) | communication / neighborhood graph | \`Topology\` |
-| \(X\) | local operator state space | domain \`State\` |
-| \(M\) | typed coordination actions / messages | \`Action\`, core message kinds |
-| \(F\) | deterministic state-transition semantics | domain \`Spec.apply\`, runtime transitions |
-| \(\Pi\) | family of local coordination policies | \`Policy\` |
-| \(C\) | admissibility / control constraints | validation in \`Spec.apply\` and runtime gates |
-| \(\Phi\) | global observable / terminal evaluation | \`Spec.evaluate\` |
-| \(J\) | cost / measurement vector | \`Cost\`, experiment accounting |
+| \(A\) | finite population of operators | `Population`, `OperatorId` |
+| \(G\) | communication / neighborhood graph | `Topology` |
+| \(X\) | local operator state space | domain `State` |
+| \(M\) | typed coordination actions / messages | `Action`, core message kinds |
+| \(F\) | deterministic state-transition semantics | domain `Spec.apply`, runtime transitions |
+| \(\Pi\) | family of local coordination policies | `Policy` |
+| \(C\) | admissibility / control constraints | validation in `Spec.apply` and runtime gates |
+| \(\Phi\) | global observable / terminal evaluation | `Spec.evaluate` |
+| \(J\) | cost / measurement vector | `Cost`, experiment accounting |
 
 This tuple remains the canonical population abstraction.
 
@@ -142,7 +142,7 @@ G_t = G
 For partition, crash, reconnect, mobility, or adversarial experiments,
 \(G_t\) may vary with time.
 
-The current core \`Topology\` uses a symmetric relation:
+The current core `Topology` uses a symmetric relation:
 
 \[
 (a_i,a_j)\in E
@@ -981,8 +981,9 @@ x_i(t+1)
 x_i(t)\sqcup e
 \]
 
-for received evidence \(e\), communication is eventually delivered across a
-temporally connected graph, and no operator deletes knowledge.
+for received evidence \(e\), no operator deletes knowledge, the dissemination
+policy eventually emits every newly reachable fact that remains relevant, and
+those emissions are eventually delivered across a temporally connected graph.
 
 Then every active operator eventually reaches the join of all information that
 is causally reachable from the active population:
@@ -1449,17 +1450,17 @@ added as an unstructured new fault matrix.
 
 | Formal object | Current implementation |
 | --- | --- |
-| \(A\) | \`src/core/formal_population.zig::Population\` |
-| \(G\) | \`Topology\` and experiment transport/topology substrates |
-| \(X\) | domain \`State\`, operator state, evidence/artifact state |
-| \(M\) | \`src/core/message.zig::Kind\` + domain action enums |
-| \(\Omega\) | domain \`observe\`, D3/GEOINT role-local observation projections |
-| \(\Pi\) | \`Policy\`, D3/GEOINT specialist policies, Stage-7 parameterized policy |
+| \(A\) | `src/core/formal_population.zig::Population` |
+| \(G\) | `Topology` and experiment transport/topology substrates |
+| \(X\) | domain `State`, operator state, evidence/artifact state |
+| \(M\) | `src/core/message.zig::Kind` + domain action enums |
+| \(\Omega\) | domain `observe`, D3/GEOINT role-local observation projections |
+| \(\Pi\) | `Policy`, D3/GEOINT specialist policies, Stage-7 parameterized policy |
 | \(\alpha\) | synchronous batch, queue order, D3/GEOINT BLAKE3 arbitration |
-| \(C\) | \`Spec.apply\` validation, D0/D3/GEOINT runtime gates |
-| \(F\) | \`Spec.apply\`, operator transitions, tool-backed state transitions |
+| \(C\) | `Spec.apply` validation, D0/D3/GEOINT runtime gates |
+| \(F\) | `Spec.apply`, operator transitions, tool-backed state transitions |
 | \(H\) | BLAKE3 content identity + Merkle-DAG provenance |
-| \(\Phi\) | \`Spec.evaluate\`, critic/evaluator, epistemic closure |
+| \(\Phi\) | `Spec.evaluate`, critic/evaluator, epistemic closure |
 | \(J\) | communication/computation/violations + experiment-specific accounting |
 | \(T\) | canonical runtime traces, semantic trace digests |
 
@@ -1544,7 +1545,7 @@ With Formal Model v0.1 frozen, the next work should be:
 
 The intended research loop is now:
 
-\`\`\`text
+```text
 formal statement
       ↓
 derive prediction / invariant
@@ -1556,7 +1557,7 @@ falsify or retain
 tighten assumptions
       ↓
 repeat
-\`\`\`
+```
 
 The purpose of the next experiments is therefore no longer to accumulate demos.
 It is to attack the mathematics.
