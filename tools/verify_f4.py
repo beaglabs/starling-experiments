@@ -466,9 +466,7 @@ def main() -> int:
     validation_text = validation.stdout.decode()
     print(
         validation_text,
-        end="" if validation_text.endswith("
-") else "
-",
+        end="" if validation_text.endswith("\n") else "\n",
     )
 
     run("python3", "tools/f4_llama_cpp.py", "--self-test", timeout_s=300)
@@ -492,8 +490,7 @@ def main() -> int:
     raw_path = pathlib.Path(args.raw)
     if not raw_path.is_file():
         raise SystemExit(
-            f"F4 raw trial missing: {raw_path}
-"
+            f"F4 raw trial missing: {raw_path}\n"
             "Run tools/f4_llama_cpp.py with --plan smoke or --plan canonical."
         )
 
