@@ -2,6 +2,7 @@ const std = @import("std");
 const artifacts = @import("artifacts.zig");
 const messages = @import("messages.zig");
 const accounting_mod = @import("accounting.zig");
+const mock_tools = @import("mock_tools.zig");
 const runtime_mod = @import("runtime.zig");
 
 pub const fixed_schedule_version: u8 = 1;
@@ -110,6 +111,7 @@ pub const FixedResult = struct {
     final_scene: artifacts.ArtifactId,
     evaluation: artifacts.ArtifactId,
     schedule_digest: artifacts.ArtifactId,
+    run_config_digest: artifacts.ArtifactId,
 
     pub fn quality(self: *const FixedResult) u64 {
         const artifact =
@@ -120,6 +122,7 @@ pub const FixedResult = struct {
 
 pub fn scheduleDigest() artifacts.ArtifactId {
     var hasher = std.crypto.hash.Blake3.init(.{});
+    hasher.update("EVO-D1-SCHEDULE");
 
     const header = [_]u8{
         fixed_schedule_version,
@@ -138,6 +141,30 @@ pub fn scheduleDigest() artifacts.ArtifactId {
         encodeU64Le(step.payload, &payload_bytes);
         hasher.update(&payload_bytes);
     }
+
+    var digest: artifacts.ArtifactId = undefined;
+    hasher.final(&digest);
+    return digest;
+}
+
+pub fn runConfigDigest(seed: u64) artifacts.ArtifactId {
+    var hasher = std.crypto.hash.Blake3.init(.{});
+    hasher.update("EVO-D1-RUN-CONFIG");
+
+    const schedule_digest = scheduleDigest();
+    hasher.update(&schedule_digest);
+    hasher.update(fixed_input_payload);
+
+    const versions = [_]u8{
+        fixed_schedule_version,
+        runtime_mod.trace_version,
+        mock_tools.mock_tool_version,
+    };
+    hasher.update(&versions);
+
+    var seed_bytes: [8]u8 = undefined;
+    encodeU64Le(seed, &seed_bytes);
+    hasher.update(&seed_bytes);
 
     var digest: artifacts.ArtifactId = undefined;
     hasher.final(&digest);
@@ -225,6 +252,7 @@ pub fn runFixed(seed: u64) !FixedResult {
         .final_scene = scene,
         .evaluation = evaluation,
         .schedule_digest = scheduleDigest(),
+        .run_config_digest = runConfigDigest(seed),
     };
 }
 
@@ -403,6 +431,12 @@ test "D1 schedule fingerprint is seed independent while execution is not" {
 
     try std.testing.expect(
         artifacts.eqlId(first.schedule_digest, second.schedule_digest),
+    );
+    try std.testing.expect(
+        !artifacts.eqlId(
+            first.run_config_digest,
+            second.run_config_digest,
+        ),
     );
 
     var first_buffer: [32 * 1024]u8 = undefined;
