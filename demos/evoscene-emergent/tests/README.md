@@ -112,3 +112,15 @@ D2e triangulation dependency (already present in the D2a venv):
 ~~~sh
 python -m pip install -r demos/evoscene-emergent/requirements-d2e.txt
 ~~~
+
+## D3 — emergent specialist population
+
+~~~sh
+zig build test-demo-evoscene-d3
+zig build -Doptimize=ReleaseFast run-demo-evoscene-d3 -- validate
+zig build test
+~~~
+
+D3 validates decentralized proposal generation, action-blind arbitration,
+same-seed replay, distinct successful seed trajectories, all-role
+participation, provenance, accounting, and deterministic STOP enforcement.
