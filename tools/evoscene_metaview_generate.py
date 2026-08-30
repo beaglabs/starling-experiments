@@ -42,7 +42,6 @@ METAVIEW_MODEL_SHA256 = (
 )
 
 QWEN_IMAGE_EDIT_REVISION = "ac7f931"
-QWEN_IMAGE_REVISION = "75e0b4b"
 DA3_GIANT_REVISION = "72ee9f8"
 DA3_DEPTH_REVISION = "b2359bd"
 
@@ -138,7 +137,6 @@ def describe() -> dict[str, Any]:
         "metaview_model_file": METAVIEW_MODEL_FILE,
         "metaview_model_sha256": METAVIEW_MODEL_SHA256,
         "qwen_image_edit_revision": QWEN_IMAGE_EDIT_REVISION,
-        "qwen_image_revision": QWEN_IMAGE_REVISION,
         "da3_giant_revision": DA3_GIANT_REVISION,
         "da3_depth_revision": DA3_DEPTH_REVISION,
         "canonical_seed": CANONICAL_SEED,
@@ -166,7 +164,6 @@ def verify_dependencies(path: pathlib.Path) -> tuple[dict[str, Any], str]:
 
     expected = {
         "qwen_image_edit_revision": QWEN_IMAGE_EDIT_REVISION,
-        "qwen_image_revision": QWEN_IMAGE_REVISION,
         "da3_giant_revision": DA3_GIANT_REVISION,
         "da3_depth_revision": DA3_DEPTH_REVISION,
     }
@@ -461,9 +458,6 @@ def run_generation(args: argparse.Namespace) -> dict[str, Any]:
                 "qwen_image_edit_revision": dependencies[
                     "qwen_image_edit_revision"
                 ],
-                "qwen_image_revision": dependencies[
-                    "qwen_image_revision"
-                ],
                 "da3_giant_revision": dependencies["da3_giant_revision"],
                 "da3_depth_revision": dependencies["da3_depth_revision"],
             },
@@ -547,9 +541,6 @@ def self_test() -> None:
         second = crop_official_output(stitched)
         if first != second:
             raise AssertionError("canonical MetaView crop is not deterministic")
-
-        with Image.open(pathlib.Path(tempfile.mkstemp(suffix=".png")[1])) if False else right:
-            pass
 
         dependency_sha = "a" * 64
         a = cache_key("b" * 64, 35_000, 10_000, 6500, dependency_sha)
