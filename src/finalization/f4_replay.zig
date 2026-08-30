@@ -285,7 +285,7 @@ const RunAccumulator = struct {
                 var rejected_buffer: [64]u8 = undefined;
                 const rejected_text =
                     try runtime.canonicalActionText(
-                        action,
+                        @as(?runtime.Action, action),
                         &rejected_buffer,
                     );
                 hashSlice(&self.trajectory_hash, "SEMANTIC_REJECT:");
@@ -297,7 +297,7 @@ const RunAccumulator = struct {
             var accepted_buffer: [64]u8 = undefined;
             const accepted_text =
                 try runtime.canonicalActionText(
-                    action,
+                    @as(?runtime.Action, action),
                     &accepted_buffer,
                 );
             self.hashSemanticDecision(accepted_text);
@@ -319,7 +319,10 @@ const RunAccumulator = struct {
             return error.MissingCachedAction;
         var buffer: [64]u8 = undefined;
         const expected_text =
-            try runtime.canonicalActionText(cached, &buffer);
+            try runtime.canonicalActionText(
+                @as(?runtime.Action, cached),
+                &buffer,
+            );
         if (!std.mem.eql(u8, expected_text, completion)) {
             return error.CachedActionMismatch;
         }
