@@ -120,37 +120,68 @@ def read_json(path: pathlib.Path) -> dict[str, Any]:
     return value
 
 
+def resolve_cloud_artifacts(
+    scene_dir: pathlib.Path,
+    label: str,
+) -> tuple[pathlib.Path, pathlib.Path, str, int]:
+    """Resolve a point-cloud state from D2b or a prior D2c refinement."""
+    d2b_manifest = scene_dir / SCENE_FILENAME
+    d2b_points = scene_dir / INPUT_POINTS_FILENAME
+    if d2b_manifest.is_file() and d2b_points.is_file():
+        scene = read_json(d2b_manifest)
+        if scene.get("schema") != "evoscene.point_cloud.v1":
+            raise RuntimeError(f"{label} D2b scene schema mismatch")
+        artifacts = scene.get("artifacts")
+        summary = scene.get("summary")
+        if not isinstance(artifacts, dict) or not isinstance(summary, dict):
+            raise RuntimeError(f"{label} D2b scene metadata is incomplete")
+        points_meta = artifacts.get("points")
+        if not isinstance(points_meta, dict):
+            raise RuntimeError(f"{label} D2b points metadata is missing")
+        return (
+            d2b_manifest,
+            d2b_points,
+            str(points_meta.get("sha256") or ""),
+            int(summary.get("point_count", -1)),
+        )
+
+    d2c_manifest = scene_dir / FUSION_MANIFEST_FILENAME
+    d2c_points = scene_dir / REFINED_POINTS_FILENAME
+    if d2c_manifest.is_file() and d2c_points.is_file():
+        fusion = read_json(d2c_manifest)
+        if fusion.get("schema") != SCHEMA:
+            raise RuntimeError(f"{label} D2c fusion schema mismatch")
+        artifacts = fusion.get("artifacts")
+        summary = fusion.get("summary")
+        if not isinstance(artifacts, dict) or not isinstance(summary, dict):
+            raise RuntimeError(f"{label} D2c fusion metadata is incomplete")
+        points_meta = artifacts.get("refined_points")
+        if not isinstance(points_meta, dict):
+            raise RuntimeError(f"{label} D2c refined-points metadata is missing")
+        return (
+            d2c_manifest,
+            d2c_points,
+            str(points_meta.get("sha256") or ""),
+            int(summary.get("refined_voxels", -1)),
+        )
+
+    raise RuntimeError(
+        f"{label} has no supported D2b/D2c point-cloud state: {scene_dir}"
+    )
+
+
 def load_scene(scene_dir: pathlib.Path, label: str) -> dict[str, Any]:
-    scene_path = scene_dir / SCENE_FILENAME
-    points_path = scene_dir / INPUT_POINTS_FILENAME
+    scene_path, points_path, expected_sha, declared_count = (
+        resolve_cloud_artifacts(scene_dir, label)
+    )
 
-    if not scene_path.is_file():
-        raise RuntimeError(f"{label} scene manifest missing: {scene_path}")
-    if not points_path.is_file():
-        raise RuntimeError(f"{label} points missing: {points_path}")
-
-    scene = read_json(scene_path)
-    if scene.get("schema") != "evoscene.point_cloud.v1":
-        raise RuntimeError(f"{label} is not a D2b point-cloud scene")
-
-    artifacts = scene.get("artifacts")
-    summary = scene.get("summary")
-    if not isinstance(artifacts, dict) or not isinstance(summary, dict):
-        raise RuntimeError(f"{label} scene metadata is incomplete")
-
-    points_meta = artifacts.get("points")
-    if not isinstance(points_meta, dict):
-        raise RuntimeError(f"{label} points metadata is missing")
-
-    expected_sha = points_meta.get("sha256")
     actual_sha = sha256_file(points_path)
-    if not isinstance(expected_sha, str) or expected_sha != actual_sha:
+    if len(expected_sha) != 64 or expected_sha != actual_sha:
         raise RuntimeError(
             f"{label} points SHA-256 mismatch: {actual_sha} != {expected_sha}"
         )
 
     data = points_path.read_bytes()
-    declared_count = int(summary.get("point_count", -1))
     if declared_count <= 0:
         raise RuntimeError(f"{label} point count is invalid")
     if len(data) != declared_count * 12:
@@ -535,6 +566,20 @@ def self_test() -> None:
             raise AssertionError("PLY depends on source/evidence order")
         if first["fused_voxels"] != 3 or first["refined_voxels"] != 1:
             raise AssertionError("synthetic fusion/refinement counts are wrong")
+
+        # Prove a D2c output can become the source state of the next
+        # reconstruction iteration without conversion or hidden state.
+        chained = root / "chained"
+        chained_args = argparse.Namespace(
+            source_dir=str(out_a),
+            evidence_dir=str(evidence),
+            output=str(chained),
+            voxel_size_m=1.0,
+            min_neighbors=0,
+        )
+        chained_result = run_fusion(chained_args)
+        if chained_result["fused_voxels"] <= 0:
+            raise AssertionError("D2c chained-state fusion produced no voxels")
 
         refined = list(
             struct.iter_unpack(
