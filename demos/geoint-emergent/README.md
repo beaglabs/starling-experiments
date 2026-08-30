@@ -218,6 +218,19 @@ GEOINT PASS: state-dependent operator emergence complete
 GEOINT STRUCTURAL PASS: typed evidence graph + state-dependent ShadowFinder boundary complete
 ```
 
+## Local photo context
+
+The photo itself stays outside the repository. To inspect immutable image
+identity and trustworthy acquisition metadata:
+
+```sh
+python tools/verify_geoint_emergent.py --photo /path/to/photo.png
+```
+
+`tools/geoint_photo_context.py` records SHA-256, dimensions, EXIF/explicit
+datetime, supplied shadow geometry, and whether ShadowFinder is actually
+eligible. Missing metadata is reported as a blocking reason rather than
+inferred.
 ## Optional real ShadowFinder run
 
 Clone the pinned ShadowFinder source and install version 0.7.0 in a compatible
