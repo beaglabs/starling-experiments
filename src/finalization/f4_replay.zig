@@ -166,8 +166,6 @@ const RunAccumulator = struct {
             &self.trajectory_hash,
             @intCast(@intFromEnum(record.source)),
         );
-        hashSlice(&self.trajectory_hash, completion);
-        hashByte(&self.trajectory_hash, 0xff);
 
         switch (expected_kind) {
             .deterministic => try self.ingestDeterministic(
@@ -215,6 +213,7 @@ const RunAccumulator = struct {
             return error.DeterministicActionMismatch;
         }
 
+        self.hashSemanticDecision(expected_text);
         self.deterministic_decisions +%= 1;
         self.actions[operator_index] = expected;
     }
@@ -267,11 +266,13 @@ const RunAccumulator = struct {
                 completion,
                 runtime.backend_error_sentinel,
             )) {
+                self.hashSemanticDecision("BACKEND_ERROR");
                 self.backend_errors +%= 1;
                 return;
             }
 
             const action = runtime.parseModelAction(completion) catch {
+                self.hashSemanticDecision("INVALID_SYNTAX");
                 self.invalid_actions +%= 1;
                 return;
             };
@@ -281,10 +282,25 @@ const RunAccumulator = struct {
                 action,
                 self.states[operator_index],
             )) {
+                var rejected_buffer: [64]u8 = undefined;
+                const rejected_text =
+                    try runtime.canonicalActionText(
+                        action,
+                        &rejected_buffer,
+                    );
+                hashSlice(&self.trajectory_hash, "SEMANTIC_REJECT:");
+                self.hashSemanticDecision(rejected_text);
                 self.semantic_rejections +%= 1;
                 return;
             }
 
+            var accepted_buffer: [64]u8 = undefined;
+            const accepted_text =
+                try runtime.canonicalActionText(
+                    action,
+                    &accepted_buffer,
+                );
+            self.hashSemanticDecision(accepted_text);
             self.accepted_model_actions +%= 1;
             self.caches[operator_index].action = action;
             self.actions[operator_index] = action;
@@ -308,8 +324,17 @@ const RunAccumulator = struct {
             return error.CachedActionMismatch;
         }
 
+        self.hashSemanticDecision(expected_text);
         self.cache_reuses +%= 1;
         self.actions[operator_index] = cached;
+    }
+
+    fn hashSemanticDecision(
+        self: *RunAccumulator,
+        text: []const u8,
+    ) void {
+        hashSlice(&self.trajectory_hash, text);
+        hashByte(&self.trajectory_hash, 0xff);
     }
 
     fn finishRoundIfComplete(self: *RunAccumulator) !void {
