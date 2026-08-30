@@ -55,12 +55,11 @@ inference controller.
 Canonical target:
 
 ~~~text
-weights:
-  ~/Downloads/models/gemma-4-E2B-it-Q4_K_M.gguf
-
-server:
-  llama-server on 127.0.0.1:8080
+gemma-4-E2B-it-Q4_K_M.gguf
 ~~~
+
+The GGUF may remain anywhere on the local machine. Live F4 runs require its
+path explicitly through `--weights`; no repository-local copy is required.
 
 The runner SHA-256 hashes the complete GGUF before the live experiment and
 records that digest in the metadata sidecar. Weights are never committed.
@@ -431,11 +430,11 @@ zig build test
 zig build -Doptimize=ReleaseFast run-f4 -- validate
 ~~~
 
-Start llama.cpp:
+Start llama.cpp with the existing local GGUF:
 
 ~~~sh
 llama-server \
-  -m ~/Downloads/models/gemma-4-E2B-it-Q4_K_M.gguf \
+  -m /absolute/path/to/gemma-4-E2B-it-Q4_K_M.gguf \
   --port 8080 \
   -np 1 \
   -c 4096
@@ -445,6 +444,7 @@ Live smoke:
 
 ~~~sh
 python3 tools/f4_llama_cpp.py \
+  --weights /absolute/path/to/gemma-4-E2B-it-Q4_K_M.gguf \
   --plan smoke \
   --output trials/f4-smoke-raw.tsv
 
@@ -456,6 +456,7 @@ Canonical replication, only after smoke passes:
 
 ~~~sh
 python3 tools/f4_llama_cpp.py \
+  --weights /absolute/path/to/gemma-4-E2B-it-Q4_K_M.gguf \
   --plan canonical \
   --output trials/f4-raw.tsv
 
