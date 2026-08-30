@@ -719,3 +719,18 @@ scene    fixed_Q   emergent_Q   fixed_cost   emergent_cost   savings
 ~~~
 
 where every value is reproducible from an authoritative trace.
+
+## Deterministic D2 completion boundary
+
+The deterministic D2 operator pipeline is complete when D2a–D2e pass:
+
+~~~text
+D2a  real metric depth + camera prior
+D2b  explicit backprojection + point-cloud scene state
+D2c  deterministic fusion + geometry refinement
+D2d  deterministic novel-view render/reprojection
+D2e  deterministic post-convergence mesh finalization/export
+~~~
+
+D2f remains optional. It may later add learned novel-view evidence but is not
+required to complete the deterministic operator substrate needed before D3.
