@@ -72,3 +72,20 @@ Live against the two validated D2b outputs:
 ~~~sh
 python tools/verify_evoscene_d2c.py --live
 ~~~
+
+## D2d — deterministic novel-view render + reprojection
+
+Structural:
+
+~~~sh
+zig build test-demo-evoscene-d2d
+zig build -Doptimize=ReleaseFast run-demo-evoscene-d2d -- validate
+python tools/evoscene_render_reproject.py --self-test
+python tools/verify_evoscene_d2d.py
+~~~
+
+Live closed-loop gate:
+
+~~~sh
+python tools/verify_evoscene_d2d.py --live
+~~~
