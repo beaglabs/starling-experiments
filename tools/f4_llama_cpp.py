@@ -879,9 +879,13 @@ def write_metadata(
     args: argparse.Namespace,
 ) -> None:
     raw_sha = sha256_file(output_path)
+    runner_sha256 = hashlib.sha256(
+        pathlib.Path(__file__).read_bytes()
+    ).hexdigest()
     metadata = {
         "stage": "F4",
         "runner_version": RUNNER_VERSION,
+        "runner_sha256": runner_sha256,
         "raw_schema_version": RAW_SCHEMA_VERSION,
         "historical_stage3f0_blob": HISTORICAL_STAGE3F0_BLOB,
         "model": model,
