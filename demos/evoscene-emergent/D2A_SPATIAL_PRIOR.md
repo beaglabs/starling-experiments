@@ -24,8 +24,13 @@ MoGe source commit:
 ~~~
 
 The source is pinned to the final MoGe-2 line before the MoGe-3 merge. The
-35M-parameter ViT-S checkpoint is small enough for a local smoke gate and emits
-metric geometry plus camera intrinsics in one inference pass.
+installed package is verified through its PEP 610 `direct_url.json` VCS
+metadata: it must resolve to the Microsoft/MoGe Git origin and the exact pinned
+commit above. This avoids relying on installed source-file bytes, which Python
+packaging may rewrite while building/installing a wheel.
+
+The 35M-parameter ViT-S checkpoint is small enough for a local smoke gate and
+emits metric geometry plus camera intrinsics in one inference pass.
 
 ## Deliberate operator boundary
 
@@ -163,8 +168,9 @@ python -m pip install --upgrade pip
 python -m pip install -r demos/evoscene-emergent/requirements-d2a.txt
 ~~~
 
-The first live run downloads the pinned 141 MB MoGe-2 ViT-S checkpoint through
-Hugging Face and verifies its SHA-256 before loading it.
+The first live run verifies that the installed MoGe package came from the
+pinned VCS commit, then downloads the pinned 141 MB MoGe-2 ViT-S checkpoint
+through Hugging Face and verifies its SHA-256 before loading it.
 
 ## Structural gate
 
