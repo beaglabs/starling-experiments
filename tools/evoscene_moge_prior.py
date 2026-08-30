@@ -79,26 +79,10 @@ def sha256_file(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
-def installed_moge_source_identity() -> dict[str, str]:
-    """Verify the installed MoGe distribution came from the pinned Git commit."""
-    try:
-        dist = importlib.metadata.distribution("moge")
-    except importlib.metadata.PackageNotFoundError as exc:
-        raise RuntimeError("the pinned moge package is not installed") from exc
-
-    raw = dist.read_text("direct_url.json")
-    if not raw:
-        raise RuntimeError(
-            "installed MoGe package has no PEP 610 direct_url.json; "
-            "install it from requirements-d2a.txt"
-        )
-
-    try:
-        info = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            "installed MoGe direct_url.json is invalid JSON"
-        ) from exc
+def validate_moge_direct_url(info: Any) -> dict[str, str]:
+    """Validate parsed PEP 610 direct-url metadata for the pinned MoGe source."""
+    if not isinstance(info, dict):
+        raise RuntimeError("installed MoGe direct_url.json must be an object")
 
     vcs = info.get("vcs_info")
     if not isinstance(vcs, dict):
@@ -134,6 +118,30 @@ def installed_moge_source_identity() -> dict[str, str]:
         "commit_id": commit_id,
         "url": url,
     }
+
+
+def installed_moge_source_identity() -> dict[str, str]:
+    """Verify the installed MoGe distribution came from the pinned Git commit."""
+    try:
+        dist = importlib.metadata.distribution("moge")
+    except importlib.metadata.PackageNotFoundError as exc:
+        raise RuntimeError("the pinned moge package is not installed") from exc
+
+    raw = dist.read_text("direct_url.json")
+    if not raw:
+        raise RuntimeError(
+            "installed MoGe package has no PEP 610 direct_url.json; "
+            "install it from requirements-d2a.txt"
+        )
+
+    try:
+        info = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            "installed MoGe direct_url.json is invalid JSON"
+        ) from exc
+
+    return validate_moge_direct_url(info)
 
 
 def write_bytes(path: pathlib.Path, data: bytes) -> None:
@@ -561,6 +569,33 @@ def self_test() -> None:
         raise AssertionError("model SHA-256 is malformed")
     if info["canonical_num_tokens"] != 1200:
         raise AssertionError("canonical token count drifted")
+
+    source = validate_moge_direct_url(
+        {
+            "url": "https://github.com/microsoft/MoGe.git",
+            "vcs_info": {
+                "vcs": "git",
+                "commit_id": MOGE_GIT_COMMIT,
+            },
+        }
+    )
+    if source["commit_id"] != MOGE_GIT_COMMIT:
+        raise AssertionError("PEP 610 source validation drifted")
+
+    try:
+        validate_moge_direct_url(
+            {
+                "url": "https://github.com/microsoft/MoGe.git",
+                "vcs_info": {
+                    "vcs": "git",
+                    "commit_id": "0" * 40,
+                },
+            }
+        )
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("PEP 610 validation accepted wrong commit")
 
     print(
         "D2a adapter self-test PASS: "
