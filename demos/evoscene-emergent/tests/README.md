@@ -89,3 +89,26 @@ Live closed-loop gate:
 ~~~sh
 python tools/verify_evoscene_d2d.py --live
 ~~~
+
+## D2e — deterministic projected-surface mesh finalization
+
+Structural:
+
+~~~sh
+zig build test-demo-evoscene-d2e
+zig build -Doptimize=ReleaseFast run-demo-evoscene-d2e -- validate
+python tools/evoscene_finalize_mesh.py --self-test
+python tools/verify_evoscene_d2e.py
+~~~
+
+Live post-convergence finalizer:
+
+~~~sh
+python tools/verify_evoscene_d2e.py --live
+~~~
+
+D2e triangulation dependency (already present in the D2a venv):
+
+~~~sh
+python -m pip install -r demos/evoscene-emergent/requirements-d2e.txt
+~~~
