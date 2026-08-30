@@ -969,6 +969,24 @@ def self_test() -> None:
     assert action is not None
     assert 1 <= action.selected <= BANDWIDTH
 
+    for topology in ("ring", "grid"):
+        for environment_seed in range(3):
+            controls = initial_states(environment_seed)
+            for round_number in range(1, MAX_ROUNDS + 1):
+                actions = [
+                    deterministic_action(
+                        controls[worker],
+                        worker,
+                        round_number,
+                        environment_seed,
+                    )
+                    for worker in range(WORKER_COUNT)
+                ]
+                controls = apply_round(controls, actions, topology)
+                if collector_solved(controls):
+                    break
+            assert collector_solved(controls)
+
     specs = model_specs("canonical")
     assert len(specs) == 80
     assert len(deterministic_specs("canonical")) == 6
