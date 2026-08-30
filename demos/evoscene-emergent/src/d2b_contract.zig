@@ -81,9 +81,9 @@ test "D2b normalized center backprojection is exact for simple camera" {
         0.5,
         0.5,
     );
-    try std.testing.expectApproxEqAbs(@as(f64, 1.0), p.x, 1e-12);
-    try std.testing.expectApproxEqAbs(@as(f64, -1.0), p.y, 1e-12);
-    try std.testing.expectApproxEqAbs(@as(f64, 2.0), p.z, 1e-12);
+    try std.testing.expect(@abs(p.x - 1.0) < 1e-12);
+    try std.testing.expect(@abs(p.y + 1.0) < 1e-12);
+    try std.testing.expect(@abs(p.z - 2.0) < 1e-12);
 }
 
 test "D2b contract fingerprint is stable" {
