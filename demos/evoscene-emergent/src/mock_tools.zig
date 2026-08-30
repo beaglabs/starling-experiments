@@ -13,6 +13,12 @@ pub const Output = struct {
     payload_hash: artifacts.ArtifactId,
 };
 
+const ToolSpec = struct {
+    kind: artifacts.ArtifactKind,
+    tool: accounting.ToolKind,
+    wall_time_ms: u64,
+};
+
 pub fn invoke(
     action: messages.ActionKind,
     inputs: [artifacts.max_parents]artifacts.Artifact,
@@ -20,41 +26,41 @@ pub fn invoke(
     seed: u64,
     payload: u64,
 ) !Output {
-    const spec = switch (action) {
+    const spec: ToolSpec = switch (action) {
         .estimate_depth => .{
-            .kind = artifacts.ArtifactKind.depth_map,
-            .tool = accounting.ToolKind.depth,
-            .wall_time_ms = @as(u64, 11),
+            .kind = .depth_map,
+            .tool = .depth,
+            .wall_time_ms = 11,
         },
         .estimate_camera => .{
-            .kind = artifacts.ArtifactKind.camera_estimate,
-            .tool = accounting.ToolKind.camera,
-            .wall_time_ms = @as(u64, 7),
+            .kind = .camera_estimate,
+            .tool = .camera,
+            .wall_time_ms = 7,
         },
         .build_geometry => .{
-            .kind = artifacts.ArtifactKind.scene_representation,
-            .tool = accounting.ToolKind.geometry,
-            .wall_time_ms = @as(u64, 31),
+            .kind = .scene_representation,
+            .tool = .geometry,
+            .wall_time_ms = 31,
         },
         .refine_geometry => .{
-            .kind = artifacts.ArtifactKind.scene_representation,
-            .tool = accounting.ToolKind.geometry,
-            .wall_time_ms = @as(u64, 29),
+            .kind = .scene_representation,
+            .tool = .geometry,
+            .wall_time_ms = 29,
         },
         .render_view => .{
-            .kind = artifacts.ArtifactKind.rendered_view,
-            .tool = accounting.ToolKind.view,
-            .wall_time_ms = @as(u64, 23),
+            .kind = .rendered_view,
+            .tool = .view,
+            .wall_time_ms = 23,
         },
         .fuse_view => .{
-            .kind = artifacts.ArtifactKind.point_cloud,
-            .tool = accounting.ToolKind.fusion,
-            .wall_time_ms = @as(u64, 13),
+            .kind = .point_cloud,
+            .tool = .fusion,
+            .wall_time_ms = 13,
         },
         .evaluate => .{
-            .kind = artifacts.ArtifactKind.evaluation_report,
-            .tool = accounting.ToolKind.evaluator,
-            .wall_time_ms = @as(u64, 5),
+            .kind = .evaluation_report,
+            .tool = .evaluator,
+            .wall_time_ms = 5,
         },
         .propose_view,
         .propose_stop,
@@ -88,7 +94,7 @@ pub fn viewRequestHash(
     seed: u64,
     payload: u64,
 ) artifacts.ArtifactId {
-    var inputs = [_]artifacts.Artifact{input} ** artifacts.max_parents;
+    const inputs = [_]artifacts.Artifact{input} ** artifacts.max_parents;
     return outputHash(
         .propose_view,
         inputs,
@@ -153,7 +159,7 @@ test "mock tool outputs are deterministic" {
     const input_id = try store.addRoot(.input_image, "fixture");
     const input = store.get(input_id).?;
 
-    var inputs = [_]artifacts.Artifact{input.*} ** artifacts.max_parents;
+    const inputs = [_]artifacts.Artifact{input.*} ** artifacts.max_parents;
     const a = try invoke(.estimate_depth, inputs, 1, 7, 0);
     const b = try invoke(.estimate_depth, inputs, 1, 7, 0);
 
@@ -167,7 +173,7 @@ test "evaluation mock emits bounded quality score" {
     const root = try store.addRoot(.input_image, "fixture");
     const root_artifact = store.get(root).?;
 
-    var inputs = [_]artifacts.Artifact{root_artifact.*} ** artifacts.max_parents;
+    const inputs = [_]artifacts.Artifact{root_artifact.*} ** artifacts.max_parents;
     const evaluation = try invoke(.evaluate, inputs, 1, 0, 0);
 
     try std.testing.expect(evaluation.value >= 800);
