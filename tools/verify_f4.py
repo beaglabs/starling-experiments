@@ -188,6 +188,7 @@ def validate_metadata(
 
     for key in (
         "weights_sha256",
+        "runner_sha256",
         "prompt_spec_sha256",
         "grammar_sha256",
         "raw_sha256",
@@ -195,6 +196,24 @@ def validate_metadata(
         value = metadata.get(key)
         if not isinstance(value, str) or len(value) != 64:
             raise SystemExit(f"invalid F4 metadata digest {key}: {value!r}")
+
+    runner_sha = hashlib.sha256(
+        (ROOT / "tools" / "f4_llama_cpp.py").read_bytes()
+    ).hexdigest()
+    if metadata.get("runner_sha256") != runner_sha:
+        raise SystemExit(
+            f"F4 runner SHA mismatch: {metadata.get('runner_sha256')} != "
+            f"{runner_sha}"
+        )
+
+    grammar_sha = hashlib.sha256(
+        (ROOT / "grammars" / "f4.gbnf").read_bytes()
+    ).hexdigest()
+    if metadata.get("grammar_sha256") != grammar_sha:
+        raise SystemExit(
+            f"F4 grammar SHA mismatch: {metadata.get('grammar_sha256')} != "
+            f"{grammar_sha}"
+        )
 
     return metadata
 
