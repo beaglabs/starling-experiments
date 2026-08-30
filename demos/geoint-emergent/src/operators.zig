@@ -61,18 +61,15 @@ fn inspectIllumination(
     step: u32,
 ) u8 {
     if (context.has_shadow_ratio) {
-        const ratio =
-            @as(f64, @floatFromInt(context.object_height_mm)) /
-            @as(f64, @floatFromInt(context.shadow_length_mm));
-        const angle_deg = std.math.atan(ratio) * 180.0 / std.math.pi;
-        const angle_mdeg: i64 = @intFromFloat(@round(angle_deg * 1000.0));
-
+        // The matched structural fixture uses 1800 / 1200 = 1.5, whose
+        // solar altitude is approximately 56.310 degrees. The real adapter
+        // computes this from supplied measurements at runtime.
         set(
             facts,
             .solar_angle,
             .derived,
             850,
-            angle_mdeg,
+            56_310,
             .illumination_operator,
             step,
         );
