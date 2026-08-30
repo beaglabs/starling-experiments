@@ -58,7 +58,7 @@ pub fn main(init: std.process.Init) !void {
     try writeLine(
         io,
         out,
-        "trace_sha256: {s}\n",
+        "trace_blake3: {s}\n",
         .{&digest_hex},
     );
     try writeLine(
