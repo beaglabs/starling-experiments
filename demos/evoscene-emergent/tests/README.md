@@ -122,6 +122,7 @@ zig build test-demo-evoscene-d2f
 zig build -Doptimize=ReleaseFast run-demo-evoscene-d2f -- validate
 python tools/evoscene_metaview_generate.py --self-test
 python tools/evoscene_ingest_learned_view.py --self-test
+python tools/evoscene_finalize_multiview.py --self-test
 python tools/verify_evoscene_d2f.py
 ~~~
 
