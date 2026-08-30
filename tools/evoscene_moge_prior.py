@@ -18,7 +18,6 @@ import hashlib
 import importlib.metadata
 import json
 import math
-import os
 import pathlib
 import platform
 import sys
@@ -80,10 +79,61 @@ def sha256_file(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
-def git_blob_sha1(path: pathlib.Path) -> str:
-    data = path.read_bytes()
-    header = f"blob {len(data)}\\0".encode("ascii")
-    return hashlib.sha1(header + data).hexdigest()
+def installed_moge_source_identity() -> dict[str, str]:
+    """Verify the installed MoGe distribution came from the pinned Git commit."""
+    try:
+        dist = importlib.metadata.distribution("moge")
+    except importlib.metadata.PackageNotFoundError as exc:
+        raise RuntimeError("the pinned moge package is not installed") from exc
+
+    raw = dist.read_text("direct_url.json")
+    if not raw:
+        raise RuntimeError(
+            "installed MoGe package has no PEP 610 direct_url.json; "
+            "install it from requirements-d2a.txt"
+        )
+
+    try:
+        info = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            "installed MoGe direct_url.json is invalid JSON"
+        ) from exc
+
+    vcs = info.get("vcs_info")
+    if not isinstance(vcs, dict):
+        raise RuntimeError(
+            "installed MoGe direct_url.json has no vcs_info"
+        )
+
+    vcs_name = str(vcs.get("vcs") or "")
+    commit_id = str(vcs.get("commit_id") or "")
+    url = str(info.get("url") or "")
+
+    if vcs_name != "git":
+        raise RuntimeError(
+            f"installed MoGe source is not Git VCS: {vcs_name!r}"
+        )
+    if commit_id != MOGE_GIT_COMMIT:
+        raise RuntimeError(
+            "installed MoGe commit mismatch: "
+            f"{commit_id} != {MOGE_GIT_COMMIT}"
+        )
+
+    normalized_url = url.rstrip("/")
+    if normalized_url.endswith(".git"):
+        normalized_url = normalized_url[:-4]
+    if not normalized_url.endswith(MOGE_SOURCE_URL_SUFFIX):
+        raise RuntimeError(
+            "installed MoGe source URL mismatch: "
+            f"{url!r} does not identify {MOGE_SOURCE_URL_SUFFIX!r}"
+        )
+
+    return {
+        "vcs": vcs_name,
+        "commit_id": commit_id,
+        "url": url,
+    }
 
 
 def write_bytes(path: pathlib.Path, data: bytes) -> None:
