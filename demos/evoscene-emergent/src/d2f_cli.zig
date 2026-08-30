@@ -33,7 +33,6 @@ pub fn main(init: std.process.Init) !void {
     try writeLine(io, out, "metaview_model_repo: {s}\n", .{contract.metaview_model_repo});
     try writeLine(io, out, "metaview_model_sha256: {s}\n", .{contract.metaview_model_sha256});
     try writeLine(io, out, "qwen_image_edit_revision: {s}\n", .{contract.qwen_image_edit_revision});
-    try writeLine(io, out, "qwen_image_revision: {s}\n", .{contract.qwen_image_revision});
     try writeLine(io, out, "da3_giant_revision: {s}\n", .{contract.da3_giant_revision});
     try writeLine(io, out, "da3_depth_revision: {s}\n", .{contract.da3_depth_revision});
     try writeLine(io, out, "canonical_seed: {d}\n", .{contract.canonical_seed});
