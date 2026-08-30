@@ -70,7 +70,7 @@ pub fn invoke(
     );
     const raw_value = digestU64(payload_hash);
     const value = if (action == .evaluate)
-        600 + (raw_value % 401)
+        800 + (raw_value % 201)
     else
         raw_value;
 
@@ -170,6 +170,6 @@ test "evaluation mock emits bounded quality score" {
     var inputs = [_]artifacts.Artifact{root_artifact.*} ** artifacts.max_parents;
     const evaluation = try invoke(.evaluate, inputs, 1, 0, 0);
 
-    try std.testing.expect(evaluation.value >= 600);
+    try std.testing.expect(evaluation.value >= 800);
     try std.testing.expect(evaluation.value <= 1000);
 }
