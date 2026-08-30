@@ -29,6 +29,16 @@ pub fn propose(
         }
     }
 
+    // A rendered observation must be fused before another view can be
+    // requested. This is local causal backpressure, not a global phase rule.
+    if (obs.rendered_view) |rendered| {
+        if (obs.point_cloud == null or
+            rendered.created_step > obs.point_cloud.?.created_step)
+        {
+            return null;
+        }
+    }
+
     // Fusion evidence exists but Geometry has not consumed it yet.
     if (obs.point_cloud) |cloud| {
         if (observation.isNewer(cloud, obs.scene)) return null;
