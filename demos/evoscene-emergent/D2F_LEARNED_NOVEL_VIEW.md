@@ -111,7 +111,10 @@ seed / steps / resolution
 ~~~
 
 The first request establishes the learned artifact. Every identical request
-from either experimental arm reuses those exact bytes.
+from either experimental arm reuses those exact bytes. A validated cache hit
+does not require the MetaView checkout, checkpoint, or CUDA environment to be
+present; the cache entry itself carries the frozen model/config/provenance
+identity.
 
 This means fixed and emergent arms pay an expensive learned-view invocation
 only for distinct requested views, while repeated identical views resolve to
@@ -175,6 +178,41 @@ novel_mask.u8
 
 That `scene.json + points.f32le` pair enters D2c without a special fusion path.
 
+## Full-world finalization after learned evidence
+
+The deterministic D2e projected-surface finalizer remains the correct fallback
+for D2a-D2e runs where only source-visible geometry exists. Once D2f has added
+side/back evidence, a source-camera-only surface would hide that evidence
+again.
+
+The full D2f profile therefore finalizes the entire fused world-space point set
+with `tools/evoscene_finalize_multiview.py`:
+
+~~~text
+final D2c world-space points
+  -> 25 mm occupied lattice
+  -> remove tiny disconnected voxel components
+  -> exposed boundary faces
+  -> globally weld shared lattice-corner vertices
+  -> deterministic Taubin smoothing
+  -> shared area-weighted normals
+  -> GLB / OBJ / PLY
+~~~
+
+Canonical smoothing parameters:
+
+~~~text
+minimum voxel component: 8 voxels
+Taubin iterations:       5
+lambda:                  0.45
+mu:                     -0.47
+~~~
+
+This is still a lightweight finalizer rather than a learned mesh generator,
+but unlike the source-view D2e fallback it allows learned side/back geometry to
+appear in the terminal mesh. The same full-world finalizer is used for both
+fixed and emergent arms whenever D2f is enabled.
+
 ## Structural gate
 
 ~~~sh
@@ -229,7 +267,7 @@ learned RGB
 -> D2a MoGe
 -> D2f metric/world bridge
 -> D2c fusion/refinement
--> revised D2e final mesh
+-> D2f full-world multiview finalizer
 ~~~
 
 and requires content-identical bridge/fusion/mesh results from the cached
