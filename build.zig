@@ -142,6 +142,15 @@ pub fn build(b: *std.Build) void {
     });
     const run_evoscene_d2e_tests = b.addRunArtifact(evoscene_d2e_tests);
 
+    const evoscene_d2f_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("demos/evoscene-emergent/src/d2f_test_root.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_evoscene_d2f_tests = b.addRunArtifact(evoscene_d2f_tests);
+
     const test_step = b.step(
         "test",
         "Run protocol-core, frozen-substrate, and finalization tests",
@@ -160,6 +169,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_evoscene_d2c_tests.step);
     test_step.dependOn(&run_evoscene_d2d_tests.step);
     test_step.dependOn(&run_evoscene_d2e_tests.step);
+    test_step.dependOn(&run_evoscene_d2f_tests.step);
 
     const evoscene_d0_test_step = b.step(
         "test-demo-evoscene-d0",
@@ -202,6 +212,12 @@ pub fn build(b: *std.Build) void {
         "Run EvoScene-emergent D2e mesh-finalization contract tests",
     );
     evoscene_d2e_test_step.dependOn(&run_evoscene_d2e_tests.step);
+
+    const evoscene_d2f_test_step = b.step(
+        "test-demo-evoscene-d2f",
+        "Run EvoScene-emergent D2f learned novel-view contract tests",
+    );
+    evoscene_d2f_test_step.dependOn(&run_evoscene_d2f_tests.step);
 
     addRunStep(b, target, optimize, "run-stage5a", "Run frozen Stage 5A CLI", "src/substrate/stage5a_run.zig");
     addRunStep(b, target, optimize, "run-stage7a", "Run frozen Stage 7A CLI", "src/substrate/stage7a_run.zig");
@@ -265,6 +281,14 @@ pub fn build(b: *std.Build) void {
         "run-demo-evoscene-d2e",
         "Run EvoScene-emergent D2e mesh-finalization contract validation",
         "demos/evoscene-emergent/src/d2e_cli.zig",
+    );
+    addRunStep(
+        b,
+        target,
+        optimize,
+        "run-demo-evoscene-d2f",
+        "Run EvoScene-emergent D2f learned novel-view contract validation",
+        "demos/evoscene-emergent/src/d2f_cli.zig",
     );
 
     const f1c_run_module = b.createModule(.{
