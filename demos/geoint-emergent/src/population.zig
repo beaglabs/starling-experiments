@@ -75,8 +75,21 @@ pub fn collectCandidates(
     out: *[12]Candidate,
 ) usize {
     var count: usize = 0;
-    inline for (std.meta.fields(protocol.Role)) |field_info| {
-        const role: protocol.Role = @enumFromInt(field_info.value);
+    const roles = [_]protocol.Role{
+        .geometry,
+        .terrain,
+        .water,
+        .illumination,
+        .atmospheric,
+        .vegetation,
+        .built_environment,
+        .motion,
+        .temporal,
+        .material_spectral,
+        .geolocation,
+        .uncertainty,
+    };
+    for (roles) |role| {
         const obs = observation.observe(rt, role);
         if (agents.propose(obs)) |proposal| {
             appendCandidate(
