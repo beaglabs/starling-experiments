@@ -11,7 +11,7 @@ import shutil
 import struct
 import subprocess
 import sys
-from typing import Any
+from typing import Any, Optional
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ADAPTER = ROOT / "tools" / "evoscene_moge_prior.py"
@@ -21,7 +21,7 @@ DEFAULT_OUTPUT = ROOT / "trials" / "evoscene-d2a-smoke"
 def run(
     *args: str,
     capture: bool = False,
-    timeout_s: int | None = None,
+    timeout_s: Optional[int] = None,
 ) -> subprocess.CompletedProcess[bytes]:
     print("+", " ".join(args), file=sys.stderr)
     proc = subprocess.run(
@@ -122,6 +122,7 @@ def validate_static_contract() -> dict[str, Any]:
         "schema_version": str(description["schema_version"]),
         "adapter_version": str(description["adapter_version"]),
         "moge_commit": str(description["moge_git_commit"]),
+        "moge_v2_blob_sha1": str(description["moge_v2_blob_sha1"]),
         "model_repo": str(description["model_repo"]),
         "model_sha256": str(description["model_sha256"]),
         "canonical_device": str(description["canonical_device"]),
@@ -189,6 +190,7 @@ def validate_artifact_dir(
     model = manifest.get("model") or {}
     required_model = {
         "moge_git_commit": description["moge_git_commit"],
+        "moge_v2_blob_sha1": description["moge_v2_blob_sha1"],
         "repo": description["model_repo"],
         "filename": description["model_filename"],
         "weight_sha256": description["model_sha256"],
@@ -306,7 +308,7 @@ def validate_artifact_dir(
 
 def run_live(
     description: dict[str, Any],
-    input_path: pathlib.Path | None,
+    input_path: Optional[pathlib.Path],
     output_root: pathlib.Path,
 ) -> None:
     if output_root.exists():
