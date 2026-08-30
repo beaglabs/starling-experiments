@@ -6,8 +6,8 @@ pub const adapter_version: u8 = 1;
 
 pub const moge_git_commit =
     "925b8ed835a7a9cdb7578ba15c658a0afc969030";
-pub const moge_v2_blob_sha1 =
-    "5cf802805f04db87f91b37a87f91c31d09b37fec";
+pub const moge_source_identity =
+    "pep610-direct-url-vcs-commit";
 pub const model_repo = "Ruicheng/moge-2-vits-normal";
 pub const model_filename = "model.pt";
 pub const model_sha256 =
@@ -53,7 +53,7 @@ pub fn contractDigest() artifacts.ArtifactId {
     hasher.update(&[_]u8{ schema_version, adapter_version });
 
     hashField(&hasher, moge_git_commit);
-    hashField(&hasher, moge_v2_blob_sha1);
+    hashField(&hasher, moge_source_identity);
     hashField(&hasher, model_repo);
     hashField(&hasher, model_filename);
     hashField(&hasher, model_sha256);
