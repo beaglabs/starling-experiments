@@ -79,6 +79,15 @@ pub fn build(b: *std.Build) void {
     });
     const run_f4_tests = b.addRunArtifact(f4_tests);
 
+    const evoscene_d0_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("demos/evoscene-emergent/src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_evoscene_d0_tests = b.addRunArtifact(evoscene_d0_tests);
+
     const test_step = b.step(
         "test",
         "Run protocol-core, frozen-substrate, and finalization tests",
@@ -90,6 +99,13 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_f3_tests.step);
     test_step.dependOn(&run_f3b_tests.step);
     test_step.dependOn(&run_f4_tests.step);
+    test_step.dependOn(&run_evoscene_d0_tests.step);
+
+    const evoscene_d0_test_step = b.step(
+        "test-demo-evoscene-d0",
+        "Run EvoScene-emergent D0 deterministic contract tests",
+    );
+    evoscene_d0_test_step.dependOn(&run_evoscene_d0_tests.step);
 
     addRunStep(b, target, optimize, "run-stage5a", "Run frozen Stage 5A CLI", "src/substrate/stage5a_run.zig");
     addRunStep(b, target, optimize, "run-stage7a", "Run frozen Stage 7A CLI", "src/substrate/stage7a_run.zig");
@@ -98,6 +114,14 @@ pub fn build(b: *std.Build) void {
     addRunStep(b, target, optimize, "run-f3", "Run F3a blind inference-gating experiment", "src/f3_run.zig");
     addRunStep(b, target, optimize, "run-f3b", "Run F3b state-aware inference-control experiment", "src/f3b_run.zig");
     addRunStep(b, target, optimize, "run-f4", "Run F4 heterogeneous operator validation/replay", "src/f4_run.zig");
+    addRunStep(
+        b,
+        target,
+        optimize,
+        "run-demo-evoscene-d0",
+        "Run EvoScene-emergent D0 validation fixture",
+        "demos/evoscene-emergent/src/d0_cli.zig",
+    );
 
     const f1c_run_module = b.createModule(.{
         .root_source_file = b.path("src/f1c_run.zig"),
