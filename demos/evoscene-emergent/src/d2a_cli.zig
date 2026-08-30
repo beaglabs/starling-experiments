@@ -33,6 +33,12 @@ pub fn main(init: std.process.Init) !void {
     try writeLine(io, out, "schema_version: {d}\n", .{contract.schema_version});
     try writeLine(io, out, "adapter_version: {d}\n", .{contract.adapter_version});
     try writeLine(io, out, "moge_commit: {s}\n", .{contract.moge_git_commit});
+    try writeLine(
+        io,
+        out,
+        "moge_v2_blob_sha1: {s}\n",
+        .{contract.moge_v2_blob_sha1},
+    );
     try writeLine(io, out, "model_repo: {s}\n", .{contract.model_repo});
     try writeLine(io, out, "model_sha256: {s}\n", .{contract.model_sha256});
     try writeLine(io, out, "canonical_device: {s}\n", .{contract.canonical_device});
