@@ -5,7 +5,7 @@ const scaling = @import("../substrate/stage5/stage5a_scaling.zig");
 pub const max_completion_bytes: usize = 4096;
 pub const max_runs: usize = 256;
 const fnv_offset: u64 = 0xcbf29ce484222325;
-const fnv_prime: u64 = 0x100000001b3f;
+const fnv_prime: u64 = 0x100000001b3;
 
 pub const RunKey = struct {
     mix: runtime.PopulationMix,
@@ -162,7 +162,10 @@ const RunAccumulator = struct {
 
         hashByte(&self.trajectory_hash, @intCast(record.round & 0xff));
         hashByte(&self.trajectory_hash, record.worker);
-        hashByte(&self.trajectory_hash, @intFromEnum(record.source));
+        hashByte(
+            &self.trajectory_hash,
+            @intCast(@intFromEnum(record.source)),
+        );
         hashSlice(&self.trajectory_hash, completion);
         hashByte(&self.trajectory_hash, 0xff);
 
@@ -434,6 +437,9 @@ pub fn summarizeTsv(tsv: []const u8) Summary {
 
 fn finishRun(summary: *Summary, run: *RunAccumulator) !void {
     if (!run.complete()) return error.IncompleteRun;
+    if (!run.solved and run.rounds != runtime.max_rounds) {
+        return error.EarlyUnsolvedTermination;
+    }
     if (summary.run_count >= max_runs) return error.TooManyRuns;
 
     const result = run.result();
