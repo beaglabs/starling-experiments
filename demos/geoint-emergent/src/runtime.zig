@@ -99,7 +99,7 @@ pub const Runtime = struct {
         }
 
         self.step +%= 1;
-        const written = try operators.invoke(self, proposal.action);
+        const written = try operators.invoke(&self.facts, self.context, self.step, proposal.action);
         self.completed[@intFromEnum(proposal.action)] = true;
         self.accounting.accepted_actions += 1;
         self.accounting.communication_units += 1;
