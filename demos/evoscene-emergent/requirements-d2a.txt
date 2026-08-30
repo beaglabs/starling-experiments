@@ -1,0 +1,5 @@
+# D2a real single-image spatial prior.
+#
+# Pin the MoGe-2 code immediately before the MoGe-3 merge so the adapter keeps
+# the exact v2 inference contract used by this stage.
+moge @ git+https://github.com/microsoft/MoGe.git@925b8ed835a7a9cdb7578ba15c658a0afc969030
