@@ -676,6 +676,74 @@ def self_test() -> None:
         if a == c:
             raise AssertionError("D2f cache key ignores pose")
 
+        cache_entry = root / a
+        output_dir = root / "replayed"
+        cache_entry.mkdir()
+
+        novel_bytes = first
+        novel_sha = sha256_bytes(novel_bytes)
+        manifest = {
+            "schema": SCHEMA,
+            "schema_version": SCHEMA_VERSION,
+            "adapter_version": ADAPTER_VERSION,
+            "backend": BACKEND,
+            "cache_key": a,
+            "input": {"file_sha256": "b" * 64},
+            "pose": {
+                "yaw_mdeg": 35_000,
+                "pitch_mdeg": 10_000,
+                "radius_mm": 6500,
+            },
+            "model": {
+                "metaview_git_commit": METAVIEW_GIT_COMMIT,
+                "metaview_inference_blob_sha1": METAVIEW_INFERENCE_BLOB_SHA1,
+                "repo": METAVIEW_MODEL_REPO,
+                "file": METAVIEW_MODEL_FILE,
+                "sha256": METAVIEW_MODEL_SHA256,
+                "seed": CANONICAL_SEED,
+                "steps": CANONICAL_STEPS,
+                "width": CANONICAL_WIDTH,
+                "height": CANONICAL_HEIGHT,
+                "prompt_id": PROMPT_ID,
+            },
+            "dependencies": {
+                "manifest_sha256": dependency_sha,
+                "qwen_image_edit_revision": QWEN_IMAGE_EDIT_REVISION,
+                "da3_giant_revision": DA3_GIANT_REVISION,
+                "da3_depth_revision": DA3_DEPTH_REVISION,
+            },
+            "config": {
+                "pose_convention": POSE_CONVENTION,
+                "output_rule": OUTPUT_RULE,
+                "cache_key_rule": CACHE_KEY_RULE,
+            },
+            "artifacts": {
+                "novel": {
+                    "file": GENERATED_FILENAME,
+                    "bytes": len(novel_bytes),
+                    "sha256": novel_sha,
+                    "encoding": "rgb-png-960x528",
+                },
+            },
+        }
+        write_bytes(cache_entry / GENERATED_FILENAME, novel_bytes)
+        write_bytes(
+            cache_entry / GENERATION_MANIFEST_FILENAME,
+            canonical_json_bytes(manifest),
+        )
+
+        replayed = materialize_cached(
+            cache_entry,
+            output_dir,
+            a,
+            "b" * 64,
+            dependency_sha,
+        )
+        if replayed["cache_key"] != a:
+            raise AssertionError("D2f cached manifest replay drifted")
+        if (output_dir / GENERATED_FILENAME).read_bytes() != novel_bytes:
+            raise AssertionError("D2f cached novel bytes changed on replay")
+
     print(
         "D2f generator self-test PASS: "
         "official-output crop + content cache key exact"
