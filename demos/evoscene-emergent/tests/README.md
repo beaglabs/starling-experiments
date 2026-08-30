@@ -38,3 +38,20 @@ python3 tools/verify_evoscene_d2a.py --live
 ~~~sh
 zig build test
 ~~~
+
+## D2b — explicit backprojection + point cloud
+
+Structural:
+
+~~~sh
+zig build test-demo-evoscene-d2b
+zig build -Doptimize=ReleaseFast run-demo-evoscene-d2b -- validate
+python tools/evoscene_backproject.py --self-test
+python tools/verify_evoscene_d2b.py
+~~~
+
+Live against the validated D2a artifacts:
+
+~~~sh
+python tools/verify_evoscene_d2b.py --live
+~~~
