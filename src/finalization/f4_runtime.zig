@@ -309,12 +309,12 @@ pub fn validateModelAction(action: Action, state: scaling.State) bool {
         .claim => blk: {
             const count = action.facts.count(fact_count);
             break :blk count >= 1 and
-                count == @as(usize, action.selected) and
+                count == @as(usize, @intCast(action.selected)) and
                 count <= bandwidth and
                 action.facts.isSubsetOf(state.knowledge);
         },
         .query_evidence =>
-            @as(usize, action.query_fact) < fact_count,
+            @as(usize, @intCast(action.query_fact)) < fact_count,
     };
 }
 
@@ -353,7 +353,7 @@ pub fn cachedActionIsStale(
             break :blk has_unsent and action.facts.isSubsetOf(state.sent);
         },
         .query_evidence =>
-            state.knowledge.has(@as(usize, action.query_fact)),
+            state.knowledge.has(@as(usize, @intCast(action.query_fact))),
     };
 }
 
@@ -413,7 +413,7 @@ pub fn applyRound(
                     metrics.communication_units +%= 1;
                     metrics.control_units +%= 1;
 
-                    const fact = @as(usize, action.query_fact);
+                    const fact = @as(usize, @intCast(action.query_fact));
                     if (!snapshot[responder].knowledge.has(fact)) continue;
 
                     metrics.messages +%= 1;
