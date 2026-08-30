@@ -398,9 +398,9 @@ Order:
 D2a real metric depth + camera prior
 D2b explicit backprojection + initial point-cloud scene state
 D2c real fusion + geometry refinement
-D2d deterministic novel-view rendering/reprojection
+D2d deterministic novel-view rendering/reprojection (existing geometry only)
 D2e deterministic final mesh generation/export
-D2f optional learned novel-view generator
+D2f optional learned novel-view generator (genuinely new image evidence)
 ~~~
 
 The mesh finalizer runs only after convergence/STOP and runs exactly once in
