@@ -30,7 +30,7 @@ SCHEMA_VERSION = 1
 SCHEMA = "evoscene.spatial_prior.v1"
 
 MOGE_GIT_COMMIT = "925b8ed835a7a9cdb7578ba15c658a0afc969030"
-MOGE_SOURCE_URL_SUFFIX = "github.com/microsoft/MoGe.git"
+MOGE_SOURCE_URL_SUFFIX = "github.com/microsoft/MoGe"
 MODEL_REPO = "Ruicheng/moge-2-vits-normal"
 MODEL_FILENAME = "model.pt"
 MODEL_SHA256 = (
