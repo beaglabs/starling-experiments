@@ -30,7 +30,7 @@ SCHEMA_VERSION = 1
 SCHEMA = "evoscene.spatial_prior.v1"
 
 MOGE_GIT_COMMIT = "925b8ed835a7a9cdb7578ba15c658a0afc969030"
-MOGE_V2_BLOB_SHA1 = "5cf802805f04db87f91b37a87f91c31d09b37fec"
+MOGE_SOURCE_URL_SUFFIX = "github.com/microsoft/MoGe.git"
 MODEL_REPO = "Ruicheng/moge-2-vits-normal"
 MODEL_FILENAME = "model.pt"
 MODEL_SHA256 = (
@@ -99,7 +99,7 @@ def describe() -> dict[str, Any]:
         "schema_version": SCHEMA_VERSION,
         "schema": SCHEMA,
         "moge_git_commit": MOGE_GIT_COMMIT,
-        "moge_v2_blob_sha1": MOGE_V2_BLOB_SHA1,
+        "moge_source_identity": "pep610-direct-url-vcs-commit",
         "model_repo": MODEL_REPO,
         "model_filename": MODEL_FILENAME,
         "model_sha256": MODEL_SHA256,
@@ -274,7 +274,7 @@ def run_prior(args: argparse.Namespace) -> dict[str, Any]:
         import torch
         from huggingface_hub import hf_hub_download
         from PIL import Image
-        import moge.model.v2 as moge_v2
+        from moge.model.v2 import MoGeModel
     except ImportError as exc:
         raise RuntimeError(
             "D2a dependencies are missing. Install "
@@ -290,14 +290,7 @@ def run_prior(args: argparse.Namespace) -> dict[str, Any]:
             f"D2a requires pinned MoGe 2.0.0; found {moge_version!r}"
         )
 
-    moge_v2_path = pathlib.Path(moge_v2.__file__).resolve()
-    actual_moge_blob = git_blob_sha1(moge_v2_path)
-    if actual_moge_blob != MOGE_V2_BLOB_SHA1:
-        raise RuntimeError(
-            "MoGe v2 source blob mismatch: "
-            f"{actual_moge_blob} != {MOGE_V2_BLOB_SHA1}"
-        )
-    MoGeModel = moge_v2.MoGeModel
+    moge_source = installed_moge_source_identity()
 
     input_path = pathlib.Path(args.input).expanduser().resolve()
     if not input_path.is_file():
@@ -414,7 +407,8 @@ def run_prior(args: argparse.Namespace) -> dict[str, Any]:
         },
         "model": {
             "moge_git_commit": MOGE_GIT_COMMIT,
-            "moge_v2_blob_sha1": actual_moge_blob,
+            "source_vcs": moge_source["vcs"],
+            "source_url": moge_source["url"],
             "repo": MODEL_REPO,
             "filename": MODEL_FILENAME,
             "weight_sha256": checkpoint_sha256,
@@ -471,7 +465,8 @@ def run_prior(args: argparse.Namespace) -> dict[str, Any]:
         "python": platform.python_version(),
         "platform": platform.platform(),
         "moge": moge_version,
-        "moge_v2_blob_sha1": actual_moge_blob,
+        "moge_source_commit": moge_source["commit_id"],
+        "moge_source_url": moge_source["url"],
         "torch": str(torch.__version__),
         "numpy": str(np.__version__),
         "canonical_run": (
