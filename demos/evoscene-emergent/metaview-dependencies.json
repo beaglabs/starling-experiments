@@ -1,0 +1,11 @@
+{
+  "schema": "evoscene.metaview.dependencies.v1",
+  "qwen_image_edit_revision": "ac7f931",
+  "da3_giant_revision": "72ee9f8",
+  "da3_depth_revision": "b2359bd",
+  "notes": {
+    "qwen_image_edit": "Pin/download Qwen/Qwen-Image-Edit at this Hugging Face revision.",
+    "da3_giant": "Pin/download depth-anything/DA3-GIANT-1.1 at this Hugging Face revision.",
+    "da3_depth": "Pin/download depth-anything/DA3NESTED-GIANT-LARGE-1.1 at this Hugging Face revision."
+  }
+}
