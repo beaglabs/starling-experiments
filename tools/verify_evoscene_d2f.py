@@ -19,7 +19,7 @@ GENERATOR = ROOT / "tools" / "evoscene_metaview_generate.py"
 MOGE = ROOT / "tools" / "evoscene_moge_prior.py"
 BRIDGE = ROOT / "tools" / "evoscene_ingest_learned_view.py"
 FUSION = ROOT / "tools" / "evoscene_fuse_refine.py"
-FINALIZER = ROOT / "tools" / "evoscene_finalize_mesh.py"
+FINALIZER = ROOT / "tools" / "evoscene_finalize_multiview.py"
 DEPENDENCIES = (
     ROOT / "demos" / "evoscene-emergent" / "metaview-dependencies.json"
 )
@@ -105,7 +105,7 @@ def validate_static_contract() -> dict[str, Any]:
     print(text, end="" if text.endswith("\n") else "\n")
     contract = parse_contract(text)
 
-    for tool in (GENERATOR, BRIDGE):
+    for tool in (GENERATOR, BRIDGE, FINALIZER):
         result = run(
             sys.executable,
             str(tool),
@@ -336,7 +336,6 @@ def run_fusion(
 
 def run_finalizer(
     source_dir: pathlib.Path,
-    camera_dir: pathlib.Path,
     output: pathlib.Path,
 ) -> None:
     run(
@@ -344,8 +343,6 @@ def run_finalizer(
         str(FINALIZER),
         "--source-dir",
         str(source_dir),
-        "--camera-dir",
-        str(camera_dir),
         "--output",
         str(output),
         timeout_s=1200,
@@ -450,8 +447,8 @@ def run_live(
 
     mesh_a = output_root / "mesh-a"
     mesh_b = output_root / "mesh-b"
-    run_finalizer(fused_a, camera_dir, mesh_a)
-    run_finalizer(fused_b, camera_dir, mesh_b)
+    run_finalizer(fused_a, mesh_a)
+    run_finalizer(fused_b, mesh_b)
 
     glb_a = sha256_file(mesh_a / "scene.glb")
     glb_b = sha256_file(mesh_b / "scene.glb")
