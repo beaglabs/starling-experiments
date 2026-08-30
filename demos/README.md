@@ -7,3 +7,4 @@ Demos are not protocol-core validation stages. They apply the frozen coordinatio
 ## Current demos
 
 - [Emergent 3D Scene Evolution](./evoscene-emergent/) — recreate the self-evolving operator structure of EvoScene using locally runnable, replaceable operators and compare a fixed paper-shaped schedule against emergent Starlings coordination.
+- [Geometry Tokens E0](./geometry-tokens-e0/) — compile a compact, deterministic geometry-token representation into one polished Blender Geometry Nodes asset as the first step toward generated rigged meshes.

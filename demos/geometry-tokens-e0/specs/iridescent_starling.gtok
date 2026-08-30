@@ -1,0 +1,32 @@
+GTOK 0.1
+asset "Iridescent Starling"
+
+# material NAME TYPE PARAMS...
+# pbr: r g b metallic roughness
+# iridescent: metallic roughness
+material plumage iridescent 0.62 0.20
+material beak pbr 0.20 0.115 0.045 0.12 0.31
+material eye pbr 0.004 0.006 0.010 0.72 0.10
+material leg pbr 0.075 0.055 0.045 0.18 0.40
+
+# primitive NAME MATERIAL x y z shape-params... rx ry rz
+ellipsoid body plumage 0.00 0.10 0.05 0.70 0.50 0.82 0 0 0
+ellipsoid chest plumage 0.00 -0.18 0.02 0.61 0.43 0.68 -7 0 0
+ellipsoid head plumage 0.00 -0.18 0.83 0.43 0.41 0.44 0 0 0
+ellipsoid crown plumage 0.00 -0.11 1.03 0.35 0.33 0.27 -6 0 0
+ellipsoid wing_left plumage -0.49 0.11 0.12 0.18 0.39 0.66 -8 -17 -6
+ellipsoid wing_right plumage 0.49 0.11 0.12 0.18 0.39 0.66 -8 17 6
+ellipsoid tail_center plumage 0.00 0.63 -0.48 0.105 0.58 0.115 -14 0 0
+ellipsoid tail_left plumage -0.16 0.61 -0.46 0.09 0.54 0.10 -13 2 8
+ellipsoid tail_right plumage 0.16 0.61 -0.46 0.09 0.54 0.10 -13 -2 -8
+ellipsoid tail_far_left plumage -0.29 0.57 -0.43 0.075 0.47 0.09 -12 3 13
+ellipsoid tail_far_right plumage 0.29 0.57 -0.43 0.075 0.47 0.09 -12 -3 -13
+cone beak beak 0.00 -0.62 0.84 0.155 0.015 0.52 90 0 0
+ellipsoid eye_left eye -0.29 -0.48 0.94 0.052 0.038 0.052 0 0 0
+ellipsoid eye_right eye 0.29 -0.48 0.94 0.052 0.038 0.052 0 0 0
+cone leg_left leg -0.16 0.03 -0.77 0.040 0.034 0.38 0 0 0
+cone leg_right leg 0.16 0.03 -0.77 0.040 0.034 0.38 0 0 0
+cone toe_left_a leg -0.16 -0.11 -0.98 0.027 0.010 0.28 76 0 -17
+cone toe_left_b leg -0.16 -0.08 -0.99 0.027 0.010 0.24 78 0 18
+cone toe_right_a leg 0.16 -0.11 -0.98 0.027 0.010 0.28 76 0 17
+cone toe_right_b leg 0.16 -0.08 -0.99 0.027 0.010 0.24 78 0 -18
