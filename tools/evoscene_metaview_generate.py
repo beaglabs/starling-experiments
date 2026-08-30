@@ -294,6 +294,9 @@ def crop_official_output(stitched_path: pathlib.Path) -> bytes:
 def materialize_cached(
     cache_entry: pathlib.Path,
     output_dir: pathlib.Path,
+    expected_key: str,
+    expected_input_sha256: str,
+    expected_dependency_sha256: str,
 ) -> dict[str, Any]:
     manifest_path = cache_entry / GENERATION_MANIFEST_FILENAME
     image_path = cache_entry / GENERATED_FILENAME
@@ -301,6 +304,38 @@ def materialize_cached(
         raise RuntimeError("incomplete D2f cache entry")
 
     manifest = read_json(manifest_path)
+    if manifest.get("schema") != SCHEMA:
+        raise RuntimeError("cached D2f manifest schema mismatch")
+    if manifest.get("cache_key") != expected_key:
+        raise RuntimeError("cached D2f key mismatch")
+    if ((manifest.get("input") or {}).get("file_sha256")) != expected_input_sha256:
+        raise RuntimeError("cached D2f input SHA mismatch")
+    if (
+        ((manifest.get("dependencies") or {}).get("manifest_sha256"))
+        != expected_dependency_sha256
+    ):
+        raise RuntimeError("cached D2f dependency manifest SHA mismatch")
+
+    model = manifest.get("model") or {}
+    expected_model = {
+        "metaview_git_commit": METAVIEW_GIT_COMMIT,
+        "metaview_inference_blob_sha1": METAVIEW_INFERENCE_BLOB_SHA1,
+        "repo": METAVIEW_MODEL_REPO,
+        "file": METAVIEW_MODEL_FILE,
+        "sha256": METAVIEW_MODEL_SHA256,
+        "seed": CANONICAL_SEED,
+        "steps": CANONICAL_STEPS,
+        "width": CANONICAL_WIDTH,
+        "height": CANONICAL_HEIGHT,
+        "prompt_id": PROMPT_ID,
+    }
+    for key, wanted in expected_model.items():
+        if model.get(key) != wanted:
+            raise RuntimeError(
+                f"cached D2f model mismatch {key}: "
+                f"{model.get(key)!r} != {wanted!r}"
+            )
+
     actual = sha256_file(image_path)
     expected = str(
         ((manifest.get("artifacts") or {}).get("novel") or {}).get("sha256")
@@ -317,34 +352,75 @@ def materialize_cached(
     return manifest
 
 
-def run_generation(args: argparse.Namespace) -> dict[str, Any]:
-    input_path = pathlib.Path(args.input).expanduser().resolve()
-    output_dir = pathlib.Path(args.output).expanduser().resolve()
-    cache_root = pathlib.Path(args.cache_dir).expanduser().resolve()
+def require_cache_miss_environment(args: argparse.Namespace) -> dict[str, Any]:
+    required = (
+        "metaview_root",
+        "metaview_python",
+        "ckpt_path",
+        "da3_giant_path",
+        "da3_depth_path",
+        "qwen_path",
+    )
+    missing = [name for name in required if getattr(args, name) is None]
+    if missing:
+        raise RuntimeError(
+            "D2f cache miss requires MetaView environment arguments: "
+            + ", ".join(missing)
+        )
+
     root = pathlib.Path(args.metaview_root).expanduser().resolve()
+    python = pathlib.Path(args.metaview_python).expanduser().resolve()
     checkpoint = pathlib.Path(args.ckpt_path).expanduser().resolve()
     da3_giant = pathlib.Path(args.da3_giant_path).expanduser().resolve()
     da3_depth = pathlib.Path(args.da3_depth_path).expanduser().resolve()
     qwen_root = pathlib.Path(args.qwen_path).expanduser().resolve()
-    dependency_path = pathlib.Path(
-        args.dependency_manifest
-    ).expanduser().resolve()
 
-    if not input_path.is_file():
-        raise RuntimeError(f"input image missing: {input_path}")
+    if not python.is_file():
+        raise RuntimeError(f"MetaView Python missing: {python}")
     if not checkpoint.is_file():
         raise RuntimeError(f"MetaView checkpoint missing: {checkpoint}")
+    if not (root / "DepthAnything3" / "src").is_dir():
+        raise RuntimeError(
+            "MetaView official import path requires "
+            f"{root / 'DepthAnything3' / 'src'}"
+        )
+    if not (qwen_root / "Qwen-Image-Edit").is_dir():
+        raise RuntimeError(
+            "--qwen-path must contain Qwen-Image-Edit/"
+        )
     for label, path in (
         ("DA3 giant", da3_giant),
         ("DA3 depth", da3_depth),
-        ("Qwen root", qwen_root),
     ):
         if not path.exists():
             raise RuntimeError(f"{label} path missing: {path}")
 
-    started = time.perf_counter_ns()
     verify_metaview_source(root)
-    dependencies, dependency_sha = verify_dependencies(dependency_path)
+
+    cuda_probe = subprocess.run(
+        [
+            str(python),
+            "-c",
+            (
+                "import sys, torch; "
+                "assert torch.cuda.is_available(), 'CUDA unavailable'; "
+                "print(sys.version.split()[0]); "
+                "print(torch.__version__); "
+                "print(torch.cuda.get_device_name(0))"
+            ),
+        ],
+        cwd=root,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if cuda_probe.returncode != 0:
+        raise RuntimeError(
+            "MetaView CUDA preflight failed\n"
+            f"stdout:\n{cuda_probe.stdout}\n"
+            f"stderr:\n{cuda_probe.stderr}"
+        )
 
     checkpoint_sha = sha256_file(checkpoint)
     if checkpoint_sha != METAVIEW_MODEL_SHA256:
@@ -352,6 +428,36 @@ def run_generation(args: argparse.Namespace) -> dict[str, Any]:
             "MetaView checkpoint SHA mismatch: "
             f"{checkpoint_sha} != {METAVIEW_MODEL_SHA256}"
         )
+
+    return {
+        "root": root,
+        "python": python,
+        "checkpoint": checkpoint,
+        "da3_giant": da3_giant,
+        "da3_depth": da3_depth,
+        "qwen_root": qwen_root,
+        "checkpoint_sha": checkpoint_sha,
+        "cuda_probe": cuda_probe.stdout.strip().splitlines(),
+    }
+
+
+def run_generation(args: argparse.Namespace) -> dict[str, Any]:
+    input_path = pathlib.Path(args.input).expanduser().resolve()
+    output_dir = pathlib.Path(args.output).expanduser().resolve()
+    cache_root = pathlib.Path(args.cache_dir).expanduser().resolve()
+    dependency_path = pathlib.Path(
+        args.dependency_manifest
+    ).expanduser().resolve()
+
+    if not input_path.is_file():
+        raise RuntimeError(f"input image missing: {input_path}")
+    if not dependency_path.is_file():
+        raise RuntimeError(
+            f"MetaView dependency manifest missing: {dependency_path}"
+        )
+
+    started = time.perf_counter_ns()
+    dependencies, dependency_sha = verify_dependencies(dependency_path)
 
     input_sha = sha256_file(input_path)
     yaw_mdeg = int(args.yaw_mdeg)
@@ -373,9 +479,25 @@ def run_generation(args: argparse.Namespace) -> dict[str, Any]:
         and (cache_entry / GENERATION_MANIFEST_FILENAME).is_file()
     )
 
+    external_env: Optional[dict[str, Any]] = None
     if cache_hit:
-        manifest = materialize_cached(cache_entry, output_dir)
+        manifest = materialize_cached(
+            cache_entry,
+            output_dir,
+            key,
+            input_sha,
+            dependency_sha,
+        )
     else:
+        external_env = require_cache_miss_environment(args)
+        root = external_env["root"]
+        python = external_env["python"]
+        checkpoint = external_env["checkpoint"]
+        da3_giant = external_env["da3_giant"]
+        da3_depth = external_env["da3_depth"]
+        qwen_root = external_env["qwen_root"]
+        checkpoint_sha = external_env["checkpoint_sha"]
+
         cache_entry.mkdir(parents=True, exist_ok=True)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -384,7 +506,7 @@ def run_generation(args: argparse.Namespace) -> dict[str, Any]:
             stitched = temp / "stitched.png"
 
             command = [
-                str(pathlib.Path(args.metaview_python).expanduser().resolve()),
+                str(python),
                 "src/inference.py",
                 "--image_path",
                 str(input_path),
@@ -499,6 +621,9 @@ def run_generation(args: argparse.Namespace) -> dict[str, Any]:
         "generation_wall_ms": int(elapsed_ms),
         "python": sys.version.split()[0],
     }
+    if external_env is not None:
+        telemetry["metaview_cuda_environment"] = external_env["cuda_probe"]
+
     write_bytes(
         output_dir / TELEMETRY_FILENAME,
         canonical_json_bytes(telemetry),
@@ -595,12 +720,6 @@ def main() -> int:
         "yaw_mdeg",
         "pitch_mdeg",
         "radius_m",
-        "metaview_root",
-        "metaview_python",
-        "ckpt_path",
-        "da3_giant_path",
-        "da3_depth_path",
-        "qwen_path",
         "dependency_manifest",
     )
     missing = [name for name in required if getattr(args, name) is None]
