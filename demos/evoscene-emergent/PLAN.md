@@ -407,6 +407,21 @@ The mesh finalizer runs only after convergence/STOP and runs exactly once in
 both fixed and emergent arms. Mesh generation therefore remains a controlled
 post-convergence cost rather than another scheduling degree of freedom.
 
+The D2 letter suffixes record implementation work packages, not runtime order.
+When learned unseen-region generation is enabled, the real execution order is:
+
+~~~text
+D2a -> D2b -> D2c
+             |
+             +-> D2d deterministic prediction / coverage evidence
+             +-> D2f learned novel RGB / new geometry
+             +-> D2c fusion/refinement
+             +-> repeat while scheduler accepts more work
+             |
+             v
+            D2e finalization after STOP
+~~~
+
 Do not merge a tool merely because it runs. Each adapter needs:
 
 ~~~text
