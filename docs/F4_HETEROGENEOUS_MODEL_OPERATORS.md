@@ -475,3 +475,249 @@ communication, model-call/cache-reuse totals, rejection counts, trajectory
 diversity, and the final PASS/LIMITATION verdict.
 
 No canonical F4 result is claimed until the canonical local run completes.
+
+## Canonical completion record — 2026-08-29
+
+The canonical 86-population F4 run completed successfully against the local
+Gemma GGUF and passed authoritative Zig replay.
+
+### Frozen identities
+
+~~~text
+summary rows:
+  86
+
+summary bytes:
+  11284
+
+summary SHA-256:
+  d263db94aee099c9ba47aa8eae60cf0ad49258fa6f299a5a9571fe6b545d2164
+
+raw TSV SHA-256:
+  bf2d791e8f37fc75c8fb423920a5737fa7a70b56599ad49d2274300256389530
+
+GGUF SHA-256:
+  740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8
+~~~
+
+Structural gates:
+
+~~~text
+byte_identical_replay: yes
+backend_errors: 0
+token_budget_violations: 0
+~~~
+
+All six deterministic controls converged:
+
+~~~text
+ring:
+  3/3
+
+grid:
+  3/3
+~~~
+
+### State-aware mixed populations
+
+CFG-constrained decoding:
+
+~~~text
+ring:
+  9/9 success
+  model_calls=36
+  cache_reuses=0
+  invalid=0
+  semantic_rejections=5
+  communication=340
+  useful=135
+  duplicate=205
+
+grid:
+  9/9 success
+  model_calls=18
+  cache_reuses=0
+  invalid=0
+  semantic_rejections=0
+  communication=180
+  useful=108
+  duplicate=72
+~~~
+
+Typed-unconstrained decoding:
+
+~~~text
+ring:
+  6/9 success
+  model_calls=104
+  cache_reuses=0
+  invalid=30
+  semantic_rejections=22
+  communication=739
+  useful=118
+  duplicate=555
+
+grid:
+  3/9 success
+  model_calls=143
+  cache_reuses=1
+  invalid=65
+  semantic_rejections=51
+  communication=934
+  useful=104
+  duplicate=803
+~~~
+
+The primary F4 heterogeneous-population success gate is therefore satisfied on
+both topologies by the CFG-constrained treatment.
+
+### State-aware model-only diagnostic
+
+CFG-constrained:
+
+~~~text
+ring:
+  9/9 success
+  invalid=0
+  semantic_rejections=11
+
+grid:
+  9/9 success
+  invalid=0
+  semantic_rejections=0
+~~~
+
+Typed-unconstrained:
+
+~~~text
+ring:
+  0/9 success
+  invalid=377
+  semantic_rejections=30
+
+grid:
+  0/9 success
+  invalid=413
+  semantic_rejections=11
+~~~
+
+The model-only arm is diagnostic rather than the F4 promotion gate, but the
+contrast demonstrates that syntactic control is operationally decisive for this
+model/environment.
+
+### Always-refresh audit
+
+~~~text
+mixed/ring/cfg:
+  1/1 success
+
+mixed/grid/cfg:
+  1/1 success
+
+mixed/ring/typed:
+  1/1 success
+
+mixed/grid/typed:
+  0/1 success
+
+model-only/ring/cfg:
+  1/1 success
+
+model-only/grid/cfg:
+  1/1 success
+
+model-only/ring/typed:
+  0/1 success
+
+model-only/grid/typed:
+  0/1 success
+~~~
+
+The audit remains diagnostic because it covers only one environment/sampling
+pair per topology/mix/mode.
+
+### Trajectory diversity
+
+The second F4 promotion condition also passed.
+
+Examples of fixed mixed populations with multiple successful semantic
+trajectories across sampling seeds:
+
+~~~text
+grid / env1 / typed:
+  successful=3
+  unique=3
+
+ring / env0 / typed:
+  successful=3
+  unique=3
+
+ring / env1 / cfg:
+  successful=3
+  unique=2
+
+ring / env1 / typed:
+  successful=3
+  unique=2
+
+ring / env2 / cfg:
+  successful=3
+  unique=3
+~~~
+
+CFG sometimes converged through one repeated trajectory for a fixed
+environment, but F4 requires only that successful heterogeneous coordination is
+not globally reducible to a single scripted path. The canonical matrix
+satisfies that criterion.
+
+### F3 controller continuity
+
+The canonical state-aware arm produced very little cache reuse:
+
+~~~text
+mixed/grid/typed:
+  cache_reuses=1
+
+model-only/grid/typed:
+  cache_reuses=13
+
+model-only/ring/typed:
+  cache_reuses=5
+
+all other state-aware groups:
+  cache_reuses=0
+~~~
+
+This does not invalidate F3. In the short F4 closed-loop environments, local
+knowledge changes, semantic invalidation, and stale-action conditions frequently
+force fresh inference. F3 established the controller as safe and useful when
+reuse opportunities exist; F4 shows that those opportunities are sparse under
+this particular live-model workload.
+
+### Interpretation
+
+F4 closes as a **PASS**.
+
+The canonical evidence demonstrates that:
+
+1. the deterministic Starlings substrate can host live model-backed operators
+   without yielding authority over state transitions, topology, validation,
+   accounting, or success;
+2. mixed deterministic/model populations can converge across both ring and grid
+   topologies;
+3. successful mixed runs require actual transfer of an initially model-held
+   essential fact into the deterministic population;
+4. repeated successful semantic trajectories occur for fixed environments;
+5. CFG-constrained decoding is dramatically more reliable than
+   typed-unconstrained decoding for this model and action language.
+
+The strict architectural conclusion is operator neutrality with deterministic
+protocol authority. The strong CFG result is also retained as an experimental
+finding, but it should not be generalized to every model or protocol language
+without further evidence.
+
+Canonical verdict:
+
+~~~text
+F4 PASS: heterogeneous model-backed operator evidence complete
+~~~
