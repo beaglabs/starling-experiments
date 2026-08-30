@@ -297,7 +297,8 @@ pub fn parseModelAction(completion: []const u8) !Action {
 
 fn parseFact(text: []const u8) !usize {
     if (text.len != 1) return error.InvalidFact;
-    if (text[0] < 'A' or text[0] >= 'A' + fact_count) {
+    const upper: u8 = 'A' + @as(u8, @intCast(fact_count));
+    if (text[0] < 'A' or text[0] >= upper) {
         return error.InvalidFact;
     }
     return @as(usize, text[0] - 'A');
