@@ -643,3 +643,64 @@ test "F4 query accounting includes control plus evidence units" {
     try std.testing.expect(metrics.control_units > 0);
     try std.testing.expect(metrics.accounted());
 }
+
+
+test "F4 deterministic theta51 controls converge in canonical small box" {
+    const topologies = [_]scaling.TopologyKind{ .ring, .grid };
+
+    for (topologies) |topology| {
+        var environment_seed: u64 = 0;
+        while (environment_seed < 3) : (environment_seed += 1) {
+            var states = initialStates(environment_seed);
+            var solved = collectorSolved(&states);
+
+            var round: u32 = 1;
+            while (round <= max_rounds and !solved) : (round += 1) {
+                var actions =
+                    [_]?Action{null} ** scaling.max_operators;
+
+                var operator_index: usize = 0;
+                while (operator_index < worker_count) :
+                    (operator_index += 1)
+                {
+                    actions[operator_index] = deterministicAction(
+                        states[operator_index],
+                        operator_index,
+                        round,
+                        topology,
+                        environment_seed,
+                    );
+                }
+
+                _ = applyRound(
+                    &states,
+                    &actions,
+                    .deterministic_only,
+                    topology,
+                    environment_seed,
+                );
+                solved = collectorSolved(&states);
+            }
+
+            try std.testing.expect(solved);
+        }
+    }
+}
+
+test "F4 mixed essential fact has only model-backed initial copies for rotations" {
+    var environment_seed: u64 = 0;
+    while (environment_seed < 5) : (environment_seed += 1) {
+        const states = initialStates(environment_seed);
+        const essential = essentialFact(environment_seed);
+
+        var worker: usize = 0;
+        while (worker < worker_count) : (worker += 1) {
+            const has = states[worker].knowledge.has(essential);
+            if (operatorKind(.mixed, worker) == .model) {
+                try std.testing.expect(has);
+            } else {
+                try std.testing.expect(!has);
+            }
+        }
+    }
+}
