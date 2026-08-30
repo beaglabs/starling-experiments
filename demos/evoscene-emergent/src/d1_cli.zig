@@ -60,6 +60,9 @@ pub fn main(init: std.process.Init) !void {
     var schedule_hex: [64]u8 = undefined;
     hexDigest(first.schedule_digest, &schedule_hex);
 
+    var config_hex: [64]u8 = undefined;
+    hexDigest(first.run_config_digest, &config_hex);
+
     var scene_hex: [64]u8 = undefined;
     hexDigest(first.final_scene, &scene_hex);
 
@@ -69,6 +72,7 @@ pub fn main(init: std.process.Init) !void {
     try writeLine(io, out, "arm: fixed\n", .{});
     try writeLine(io, out, "schedule_version: {d}\n", .{fixed.fixed_schedule_version});
     try writeLine(io, out, "schedule_blake3: {s}\n", .{&schedule_hex});
+    try writeLine(io, out, "run_config_blake3: {s}\n", .{&config_hex});
     try writeLine(io, out, "fixed_iterations: {d}\n", .{fixed.fixed_poses.len});
     try writeLine(io, out, "trace_events: {d}\n", .{first.runtime_state.trace_len});
     try writeLine(io, out, "trace_bytes: {d}\n", .{first_bytes.len});
