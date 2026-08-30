@@ -15,7 +15,6 @@ pub const metaview_model_sha256 =
     "a67ae628ea665c0f9ef00be3db38eaebca02734f63a4e04118573ac9e30a74ef";
 
 pub const qwen_image_edit_revision = "ac7f931";
-pub const qwen_image_revision = "75e0b4b";
 pub const da3_giant_revision = "72ee9f8";
 pub const da3_depth_revision = "b2359bd";
 
@@ -55,7 +54,6 @@ pub fn contractDigest() artifacts.ArtifactId {
     hashField(&hasher, metaview_model_file);
     hashField(&hasher, metaview_model_sha256);
     hashField(&hasher, qwen_image_edit_revision);
-    hashField(&hasher, qwen_image_revision);
     hashField(&hasher, da3_giant_revision);
     hashField(&hasher, da3_depth_revision);
     hashField(&hasher, prompt_id);
