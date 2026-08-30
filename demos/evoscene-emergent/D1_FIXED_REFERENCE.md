@@ -61,9 +61,13 @@ The fixed controller has its own BLAKE3 fingerprint derived from:
 - exact action payloads;
 - fixed STOP quality floor.
 
-The fingerprint is independent of execution seed. This lets later stages prove
-that D2 tool substitutions and D3/D4 emergent experiments did not silently
-change the A-side controller.
+The schedule fingerprint is independent of execution seed. This lets later
+stages prove that D2 tool substitutions and D3/D4 emergent experiments did not
+silently change the A-side controller.
+
+D1 also emits a per-run configuration fingerprint that includes the schedule
+fingerprint, input fixture identity, runtime trace version, mock-tool version,
+and seed.
 
 ## Expected accounting
 
