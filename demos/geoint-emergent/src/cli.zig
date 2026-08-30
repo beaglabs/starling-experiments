@@ -51,7 +51,7 @@ pub fn main(init: std.process.Init) !void {
         !base0.deadlocked and
         base0.participating_roles == 12 and
         base0.shadowfinder_calls == 0 and
-        base0.resolved_fields == schema.field_count and
+        base0.resolved_fields == @as(u8, @intCast(schema.field_count)) and
         base0.runtime.facts.status(.candidate_region) == .blocked and
         base0.runtime.invariantsHold();
 
@@ -60,7 +60,7 @@ pub fn main(init: std.process.Init) !void {
         !shadow0.deadlocked and
         shadow0.participating_roles == 12 and
         shadow0.shadowfinder_calls == 1 and
-        shadow0.resolved_fields == schema.field_count and
+        shadow0.resolved_fields == @as(u8, @intCast(schema.field_count)) and
         shadow0.runtime.facts.status(.candidate_region) == .derived and
         shadow0.runtime.invariantsHold();
 
