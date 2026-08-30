@@ -259,7 +259,7 @@ The Zig replayer independently:
 - measures all communication;
 - reconstructs collector success;
 - produces the canonical per-population summary;
-- hashes complete trajectories.
+- hashes semantic decision trajectories rather than raw model wording.
 
 The Python state mirror exists only to construct the next closed-loop prompt.
 Any Python/Zig disagreement rejects the record.
@@ -376,10 +376,15 @@ For each fixed mixed/topology/environment/mode/state-aware configuration, the
 three sampling seeds provide repeated populations from the same initial state
 and treatment.
 
+The trajectory hash records semantic decision events rather than raw completion
+wording. Accepted actions, cache reuses, syntax rejection, semantic rejection,
+and backend failure are distinct events; irrelevant wording differences cannot
+inflate diversity.
+
 Healthy controlled emergence can appear as:
 
 ~~~text
-multiple successful trajectory hashes
+multiple successful semantic trajectory hashes
 same correct collector outcome
 ~~~
 
