@@ -445,7 +445,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--vllm-image", default=DEFAULT_VLLM_IMAGE)
     p.add_argument(
         "--gpu-types",
-        default="rtx-5090,rtx-pro-6000,h100",
+        default="rtx-4090,rtx-5090,rtx-pro-6000,h100",
     )
     p.add_argument("--controller-root", default=DEFAULT_ROOT)
     p.add_argument("--controller-id", help="reuse a Daytona GPU sandbox")
@@ -528,7 +528,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             sandbox = daytona.get(args.controller_id)
             print(f"reusing controller_id={sandbox.id}", flush=True)
         else:
-            sandbox = create_controller(daytona, args)
+            try:
+                sandbox = create_controller(daytona, args)
+            except Exception as exc:
+                message = str(exc)
+                if "doesn't have GPU credits" in message or "GPU credits" in message:
+                    raise SystemExit(
+                        "Daytona rejected the GPU controller because this organization "
+                        "has no paid GPU credits. Daytona free credits cannot be used "
+                        "for GPU sandboxes. Add paid credits in the Daytona Wallet, "
+                        "then rerun the same command."
+                    ) from None
+                raise
             print(f"controller_id={sandbox.id}", flush=True)
 
         if not args.skip_setup:
