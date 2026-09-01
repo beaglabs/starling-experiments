@@ -398,9 +398,7 @@ def run_suite(sandbox, args) -> list[dict[str, object]]:
                 }
             )
             if exit_code and not args.keep_going:
-                raise RuntimeError(
-                    f"{benchmark}/{condition} failed with exit {exit_code}"
-                )
+                return results
 
     return results
 
