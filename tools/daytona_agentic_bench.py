@@ -368,7 +368,7 @@ def run_suite(sandbox, args) -> list[dict[str, object]]:
             command = harbor_command(
                 spec,
                 concurrency=args.concurrency,
-                max_tasks=args.max_tasks,
+                max_tasks=args.n_tasks,
                 output_dir=jobs,
             )
 
@@ -495,7 +495,7 @@ def dry_run(args) -> int:
                 harbor_command(
                     spec,
                     concurrency=args.concurrency,
-                    max_tasks=args.max_tasks,
+                    max_tasks=args.n_tasks,
                     output_dir=jobs,
                 )
             )
@@ -504,7 +504,7 @@ def dry_run(args) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
-    if args.max_tasks is not None and args.max_tasks <= 0:
+    if args.n_tasks is not None and args.n_tasks <= 0:
         raise SystemExit("--n-tasks must be > 0")
     if args.concurrency <= 0:
         raise SystemExit("--concurrency must be > 0")
