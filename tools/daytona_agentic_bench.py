@@ -144,7 +144,7 @@ def harbor_command(
     if spec.model:
         parts += ["-m", spec.model]
     if max_tasks is not None:
-        parts += ["--max-tasks", str(max_tasks)]
+        parts += ["--n-tasks", str(max_tasks)]
     for kwarg in spec.agent_kwargs:
         parts += ["--ak", kwarg]
     return join(parts)
@@ -434,7 +434,7 @@ def parser() -> argparse.ArgumentParser:
         default="oracle",
         help="comma separated: oracle,a,b,c",
     )
-    p.add_argument("--max-tasks", type=int, default=1)
+    p.add_argument("--n-tasks", type=int, default=1)
     p.add_argument("--concurrency", type=int, default=8)
     p.add_argument("--max-turns", type=int, default=50)
     p.add_argument("--model", default=DEFAULT_MODEL)
@@ -505,7 +505,7 @@ def dry_run(args) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
     if args.max_tasks is not None and args.max_tasks <= 0:
-        raise SystemExit("--max-tasks must be > 0")
+        raise SystemExit("--n-tasks must be > 0")
     if args.concurrency <= 0:
         raise SystemExit("--concurrency must be > 0")
     if args.max_turns <= 0:
