@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+import sys
 import unittest
 
 MODULE_PATH = pathlib.Path(__file__).with_name("daytona_agentic_bench.py")
 SPEC = importlib.util.spec_from_file_location("daytona_agentic_bench", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 bench = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = bench
 SPEC.loader.exec_module(bench)
 
 
