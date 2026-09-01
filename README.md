@@ -59,3 +59,13 @@ c89d1985af0479191126fca91265b1fe7f49e7b34db471e13c74e8bb28195a36
 
 The generated `trials/s0-stage7c.tsv` remains ignored. S0 is not complete
 unless the verifier prints `S0 PASS`.
+
+
+## Agentic benchmark campaign
+
+The first architecture-oriented benchmark suite runs SkillsBench 1.1, Harbor
+Index 1.0, tau3-bench, and Frontier-Bench entirely on Daytona. One GPU Daytona
+sandbox hosts the frozen model and Harbor controller; Harbor provisions task
+sandboxes through Daytona, so no local Docker daemon is required.
+
+See [Daytona agentic benchmark campaign](docs/DAYTONA_AGENTIC_BENCHMARKS.md).
