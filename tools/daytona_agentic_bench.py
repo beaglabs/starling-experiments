@@ -189,7 +189,9 @@ def setup_controller(sandbox, args) -> None:
     )
     exec_checked(
         sandbox,
-        "python -m pip install --no-cache-dir -U 'harbor[daytona]'",
+        "python -m venv /opt/harbor-venv && "
+        "/opt/harbor-venv/bin/pip install --no-cache-dir -U 'harbor[daytona]' && "
+        "ln -sf /opt/harbor-venv/bin/harbor /usr/local/bin/harbor",
         timeout=1200,
     )
     exec_checked(sandbox, f"mkdir -p {root}")
